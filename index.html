@@ -3,140 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PINK SHADOW | ULTIMATE FLOW</title>
+    <title>PINK.OS | COW_SERIES</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@300;700&display=swap');
-        :root { --p-neon: #ff007f; --p-glow: rgba(255, 0, 127, 0.6); }
-        
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: #000; color: #fff; overflow: hidden; font-family: 'Rajdhani', sans-serif; }
 
-        /* حاوية التمرير فائقة الانسيابية */
+        :root {
+            --p-neon: #ff007f;
+            --p-glow: rgba(255, 0, 127, 0.6);
+            --bg-dark: #050002;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body { 
+            background: var(--bg-dark); color: #fff; 
+            overflow: hidden; font-family: 'Rajdhani', sans-serif;
+        }
+
         .app-container { 
             height: 100vh; width: 100vw;
-            overflow-y: scroll; scroll-snap-type: y mandatory; 
-            scroll-behavior: smooth; scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
+            overflow-y: scroll; 
+            scroll-snap-type: y mandatory; 
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            perspective: 1500px; 
         }
         .app-container::-webkit-scrollbar { display: none; }
 
         .video-card { 
-            height: 100vh; width: 100vw; scroll-snap-align: start; 
-            scroll-snap-stop: always; position: relative; 
+            height: 100vh; width: 100vw;
+            scroll-snap-align: start; 
+            scroll-snap-stop: always;
+            position: relative; 
             display: flex; align-items: center; justify-content: center;
+            background: #000;
         }
 
-        /* تصميم البطاقة العائمة */
         .video-wrapper {
-            width: 92%; height: 86%; border-radius: 35px;
-            overflow: hidden; position: relative;
-            transform: scale(0.92); transition: 0.8s cubic-bezier(0.2, 1, 0.3, 1);
-            box-shadow: 0 0 40px rgba(0,0,0,0.9), 0 0 30px var(--p-glow);
-            border: 1.5px solid rgba(255, 0, 127, 0.2);
-            background: #050002;
+            width: 92%; height: 88%;
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+            transform: scale(0.85) rotateX(10deg);
+            transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 40px 100px rgba(0,0,0,0.9), 0 0 30px var(--p-glow);
+            border: 1px solid rgba(255, 0, 127, 0.1);
         }
-        .video-card.active .video-wrapper { transform: scale(1); border-color: var(--p-neon); }
 
-        video { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.5s; }
-        video.ready { opacity: 1; }
-
-        /* أيقونة التحميل الوردية الفخمة */
-        .loader-spin {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px; height: 50px;
-            border: 3px solid rgba(255, 0, 127, 0.1);
-            border-top: 3px solid var(--p-neon);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            z-index: 20;
-            display: block;
-            box-shadow: 0 0 15px var(--p-glow);
+        .video-card.active .video-wrapper {
+            transform: scale(1) rotateX(0deg);
+            border: 1px solid var(--p-neon);
         }
-        @keyframes spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
 
-        /* التحكم الجانبي */
-        .side-dock { position: absolute; left: 25px; bottom: 120px; z-index: 100; display: flex; flex-direction: column; gap: 20px; }
+        video { 
+            width: 100%; height: 100%; 
+            object-fit: cover; 
+            filter: brightness(0.6);
+            transition: 1.2s filter;
+        }
+        .active video { filter: brightness(1.1); }
+
+        .side-scanner {
+            position: absolute; left: 0; top: 0; width: 3px; height: 100%;
+            background: var(--p-neon); box-shadow: 0 0 20px var(--p-neon);
+            animation: scanY 4s infinite linear; z-index: 10;
+            opacity: 0.5;
+        }
+        @keyframes scanY { 0% { top: -100%; } 100% { top: 100%; } }
+
+        .side-dock { position: absolute; left: 25px; bottom: 120px; z-index: 100; display: flex; flex-direction: column; gap: 15px; }
         .dock-item {
-            width: 55px; height: 55px; background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(20px); border-radius: 18px;
+            width: 50px; height: 50px; 
+            background: rgba(15, 0, 7, 0.6);
+            backdrop-filter: blur(15px); border-radius: 15px;
             display: flex; align-items: center; justify-content: center;
-            border: 1px solid var(--p-neon); color: var(--p-neon); transition: 0.3s;
+            border: 1px solid var(--p-neon); 
+            transition: 0.3s all;
+            color: var(--p-neon);
+            cursor: pointer;
+        }
+        .dock-item:active { transform: scale(0.8); background: var(--p-neon); color: white; }
+
+        .hud-info {
+            position: absolute; bottom: 60px; right: 40px;
+            z-index: 100; text-align: right; pointer-events: none;
         }
 
         .progress-line {
             position: absolute; bottom: 0; left: 0; height: 3px;
-            background: var(--p-neon); box-shadow: 0 0 15px var(--p-neon); width: 0%;
+            background: var(--p-neon);
+            width: 0%; z-index: 1000; transition: 0.1s linear;
         }
 
-        .hud-display { position: absolute; bottom: 50px; right: 40px; z-index: 100; text-align: right; pointer-events: none; }
+        .top-header {
+            position: fixed; top: 0; width: 100%; padding: 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
 
-    <div class="fixed top-0 w-full z-[1000] p-10 flex justify-between pointer-events-none">
-        <h1 class="text-3xl font-black italic text-pink-500" style="font-family:'Orbitron';">PINK.FLOW</h1>
-        <div id="clock" class="text-xl font-bold opacity-70">00:00:00</div>
+    <div class="top-header">
+        <div>
+            <div class="text-[9px] text-pink-500/70 tracking-[10px] mb-1 font-bold">SYSTEM OVERRIDE</div>
+            <h1 class="text-3xl font-black italic tracking-tighter" style="font-family:'Orbitron'; color: var(--p-neon); text-shadow: 0 0 15px var(--p-glow);">PINK.OS</h1>
+        </div>
+        <div class="text-right">
+            <div id="clock" class="text-xl font-bold opacity-90 tracking-widest" style="font-family:'Orbitron';">00:00:00</div>
+        </div>
     </div>
 
     <div class="app-container" id="feed"></div>
 
     <script>
-        const cloudBase = 'https://res.cloudinary.com/dssk5tabb/video/upload/q_auto,f_auto/';
-        const playlist = ['1cowgirl', '2cowgirl', '3cowgirl', '4cowgirl', '5cowgirl'];
+        const cloudName = 'dssk5tabb';
+        const pikPakUrl = 'https://mypikpak.com/s/VOmLsWNW-NbOvA9b_54tcn_go2';
+
+        // قائمة الفيديوهات بالأسماء الجديدة والترتيب المطلوب
+        const videoData = [
+            { id: '10_pjxuqz', title: '1cowgirl.mp4' },
+            { id: '14_qb8m0r', title: '2cowgirl.mp4' },
+            { id: 'clinic1_bl7d06', title: '3cowgirl.mp4' },
+            { id: 'clinic2_iysqfw', title: '4cowgirl.mp4' },
+            { id: '02_nz4lq0', title: '5cowgirl.mp4' }
+        ];
 
         const feed = document.getElementById('feed');
 
-        playlist.forEach((name, index) => {
+        videoData.forEach((item, index) => {
             const card = document.createElement('div');
             card.className = 'video-card';
             card.innerHTML = `
                 <div class="video-wrapper">
-                    <div class="loader-spin" id="loader-${index}"></div>
-                    <video loop playsinline muted src="${cloudBase}${name}.mp4" oncanplaythrough="removeLoader(${index})"></video>
+                    <div class="side-scanner"></div>
+                    <video loop playsinline muted preload="auto" src="https://res.cloudinary.com/${cloudName}/video/upload/q_auto,f_auto/${item.id}.mp4"></video>
                     <div class="progress-line"></div>
                 </div>
+
                 <div class="side-dock">
-                    <div class="dock-item"><i class="fas fa-heart"></i></div>
-                    <div class="dock-item"><i class="fas fa-plus"></i></div>
+                    <div class="dock-item" onclick="window.open('${pikPakUrl}', '_blank')"><i class="fas fa-play"></i></div>
+                    <div class="dock-item" onclick="window.open('${pikPakUrl}', '_blank')"><i class="fas fa-cloud-download-alt"></i></div>
                 </div>
-                <div class="hud-display">
-                    <h2 class="text-4xl font-black italic text-white uppercase" style="font-family:'Orbitron';">${name}</h2>
-                    <p class="text-pink-500 text-[10px] tracking-[5px] mt-1 font-bold">STREAM_ID_${index + 1}</p>
+
+                <div class="hud-info">
+                    <h2 class="text-3xl font-black italic uppercase leading-none" style="font-family:'Orbitron'; text-shadow: 0 0 20px var(--p-glow);">${item.title}</h2>
+                    <p class="text-pink-500/80 text-[10px] mt-2 tracking-[4px] font-bold">NODE_0${index+1}</p>
                 </div>
             `;
             feed.appendChild(card);
         });
 
-        // وظيفة إخفاء أيقونة التحميل
-        function removeLoader(idx) {
-            const loader = document.getElementById(`loader-${idx}`);
-            const video = loader.nextElementSibling;
-            loader.style.display = 'none';
-            video.classList.add('ready');
-        }
-
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 const vid = entry.target.querySelector('video');
                 const bar = entry.target.querySelector('.progress-line');
+                
                 if (entry.isIntersecting) {
                     entry.target.classList.add('active');
-                    vid.play();
-                    vid.ontimeupdate = () => { bar.style.width = (vid.currentTime / vid.duration) * 100 + '%'; };
+                    vid.play().catch(() => {});
+                    vid.ontimeupdate = () => { 
+                        bar.style.width = (vid.currentTime / vid.duration) * 100 + '%'; 
+                    };
                 } else {
                     entry.target.classList.remove('active');
                     vid.pause();
                 }
             });
-        }, { threshold: 0.6 });
+        }, { threshold: 0.7 });
 
         document.querySelectorAll('.video-card').forEach(c => observer.observe(c));
 
-        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
-        window.onclick = () => { document.querySelectorAll('video').forEach(v => v.muted = false); };
+        window.addEventListener('click', () => {
+            document.querySelectorAll('video').forEach(v => v.muted = false);
+        }, { once: true });
+
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('en-US', { hour12: false });
+        }, 1000);
     </script>
 </body>
 </html>
