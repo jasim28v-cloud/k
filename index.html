@@ -40,6 +40,7 @@
         const pikPakUrl = 'https://mypikpak.com/s/VOmLsWNW-NbOvA9b_54tcn_go2';
         const cloudName = 'dssk5tabb';
 
+        // تم استبدال الأسماء والحفاظ على الترتيب المطلوب
         const videoData = [
             { id: '10_pjxuqz', title: '1cowgirl.mp4' },
             { id: '14_qb8m0r', title: '2cowgirl.mp4' },
@@ -50,7 +51,7 @@
 
         const feed = document.getElementById('feed');
 
-        videoData.forEach((item, index) => {
+        videoData.forEach((item) => {
             const card = document.createElement('div');
             card.className = 'video-card';
             card.innerHTML = `
