@@ -123,16 +123,17 @@
     <div class="app-container" id="feed"></div>
 
     <script>
-        // تفكيك الرابط الجديد: dssk5tabb
+        // تفكيك الرابط الجديد
         const cloudName = 'dssk5tabb';
-        
-        // استبدال كامل لقائمة الفيديوهات بالأسماء الجديدة فقط
+        const collectionPath = '38d13a282ddd2f7131580273fefff368';
+
+        // قائمة الفيديوهات الجديدة التي طلبتها
         const videoData = [
-            { id: '1cowgirl', title: 'Protocol Alpha' },
-            { id: '2cowgirl', title: 'Data Stream B' },
-            { id: '3cowgirl', title: 'Neural Link C' },
-            { id: '4cowgirl', title: 'Core Signal D' },
-            { id: '5cowgirl', title: 'Final Node E' }
+            { id: '1cowgirl', title: 'Neural Entry' },
+            { id: '2cowgirl', title: 'Data Stream' },
+            { id: '3cowgirl', title: 'Med-Sync' },
+            { id: '4cowgirl', title: 'Bio-Matrix' },
+            { id: '5cowgirl', title: 'Phase One' }
         ];
 
         const feed = document.getElementById('feed');
@@ -143,7 +144,7 @@
             card.innerHTML = `
                 <div class="video-wrapper">
                     <div class="side-scanner"></div>
-                    <video loop playsinline muted src="https://res.cloudinary.com/${cloudName}/video/upload/q_auto,f_auto/${item.id}.mp4"></video>
+                    <video loop playsinline muted src="https://res.cloudinary.com/${cloudName}/video/upload/c_limit,w_2000/v1/${collectionPath}/${item.id}.mp4"></video>
                     <div class="progress-line"></div>
                 </div>
 
