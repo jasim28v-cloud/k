@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SHADOW OS | COWGIRL SERIES</title>
+    <title>SHADOW OS | UPDATED COLLECTION</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -11,6 +11,7 @@
 
         :root {
             --neon-blue: #00f3ff;
+            --neon-purple: #bc13fe;
             --glass: rgba(0, 0, 0, 0.6);
         }
 
@@ -50,6 +51,32 @@
             z-index: 2; pointer-events: none;
         }
 
+        .comments-panel {
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%;
+            background: var(--glass); backdrop-filter: blur(25px);
+            border-top: 1px solid var(--neon-blue); border-radius: 30px 30px 0 0;
+            z-index: 2000; transition: 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+            padding: 30px;
+        }
+        .comments-panel.active { bottom: 0; }
+
+        .comment-row {
+            display: flex; gap: 15px; margin-bottom: 20px;
+            animation: slideIn 0.4s ease forwards; opacity: 0;
+        }
+        @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .avatar {
+            width: 45px; height: 45px; border-radius: 12px;
+            border: 1px solid var(--neon-blue);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+        }
+
+        .comment-text-box {
+            background: rgba(255, 255, 255, 0.05); padding: 12px;
+            border-radius: 0 15px 15px 15px; flex: 1;
+        }
+
         .side-dock { position: absolute; right: 20px; bottom: 120px; z-index: 100; display: flex; flex-direction: column; gap: 20px; }
         .dock-item {
             width: 50px; height: 50px; background: rgba(255,255,255,0.05);
@@ -60,16 +87,6 @@
         .dock-item:hover { background: var(--neon-blue); color: #000; transform: scale(1.1); }
 
         .progress-line { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--neon-blue); width: 0%; z-index: 100; }
-        
-        /* لوحة التعليقات */
-        .comments-panel {
-            position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%;
-            background: var(--glass); backdrop-filter: blur(25px);
-            border-top: 1px solid var(--neon-blue); border-radius: 30px 30px 0 0;
-            z-index: 2000; transition: 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-            padding: 30px;
-        }
-        .comments-panel.active { bottom: 0; }
     </style>
 </head>
 <body>
@@ -79,7 +96,7 @@
             <h1 class="font-black text-2xl tracking-tighter" style="font-family: 'Orbitron';">SHΔDØW<span class="text-cyan-400">.OS</span></h1>
             <div id="clock" class="text-xs text-white/50">00:00:00</div>
         </div>
-        <div class="px-4 py-1 border border-cyan-500/30 rounded-full text-[10px] uppercase tracking-widest bg-black/50">Stream: Active</div>
+        <div class="px-4 py-1 border border-cyan-500/30 rounded-full text-[10px] uppercase tracking-widest bg-black/50">System: Active</div>
     </div>
 
     <div class="app-container" id="feed"></div>
@@ -87,25 +104,29 @@
     <div id="commentBox" class="comments-panel">
         <div class="w-16 h-1 bg-white/20 mx-auto mb-6 rounded-full cursor-pointer" onclick="toggleComments()"></div>
         <h2 class="text-cyan-400 font-bold mb-6 text-center italic uppercase tracking-widest">Neural Feed Comments</h2>
-        <div id="commentsList" class="overflow-y-auto h-[80%] pr-2 text-white/80">
-            </div>
+        <div id="commentsList" class="overflow-y-auto h-[80%] pr-2"></div>
     </div>
 
     <script>
+        // التعديل: الحساب الجديد (بقي كما هو dssk5tabb بناءً على الرابط)
         const cloudName = 'dssk5tabb';
         
-        // تم استبدال الأسماء كما طلبت
+        // التعديل: المعرفات (IDs) التابعة للمجموعة الجديدة 38d13a282ddd2f7131580273fefff368
         const videoData = [
-            { id: '1cowgirl', title: 'Cowgirl Phase 01' },
-            { id: '2cowgirl', title: 'Cowgirl Phase 02' },
-            { id: '3cowgirl', title: 'Cowgirl Phase 03' },
-            { id: '4cowgirl', title: 'Cowgirl Phase 04' },
-            { id: '5cowgirl', title: 'Cowgirl Phase 05' }
+            { id: '11_j9t8m1', title: 'Data Stream A' },
+            { id: '12_k2v9n4', title: 'Neural Pulse' },
+            { id: '13_x1r5z8', title: 'Core Protocol' },
+            { id: '14_m3p7w2', title: 'Shadow Sync' },
+            { id: '15_b6n4y9', title: 'Vector Node' }
+        ];
+
+        const commentsData = [
+            { user: "Zero_Cool", text: "هذا النظام سريع جداً! ⚡", img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" },
+            { user: "Matrix_99", text: "تم تحديث المجموعة بنجاح..", img: "https://api.dicebear.com/7.x/bottts/svg?seed=Shadow" }
         ];
 
         const feed = document.getElementById('feed');
         
-        // إنشاء البطاقات
         videoData.forEach((item) => {
             const card = document.createElement('div');
             card.className = 'video-card';
@@ -123,44 +144,54 @@
                 </div>
 
                 <div class="absolute bottom-10 left-8 z-[100] pointer-events-none">
-                    <div class="bg-cyan-500/10 text-cyan-400 text-[9px] px-2 py-1 rounded border border-cyan-500/20 mb-2 inline-block">SOURCE: ${item.id}.mp4</div>
+                    <div class="bg-cyan-500/10 text-cyan-400 text-[9px] px-2 py-1 rounded border border-cyan-500/20 mb-2 inline-block">NODE: ${item.id}</div>
                     <h2 class="text-3xl font-black uppercase italic leading-none" style="font-family:'Orbitron';">${item.title}</h2>
-                    <p class="text-white/40 text-xs mt-2 tracking-[4px]">SYNC_STATUS: STABLE</p>
+                    <p class="text-white/40 text-xs mt-2 tracking-[4px]">STATUS: LIVE_COLLECTION</p>
                 </div>
             `;
             feed.appendChild(card);
         });
 
-        // تشغيل الفيديوهات عند الظهور
+        function toggleComments() {
+            const box = document.getElementById('commentBox');
+            box.classList.toggle('active');
+            if(box.classList.contains('active')) loadComments();
+        }
+
+        function loadComments() {
+            const list = document.getElementById('commentsList');
+            list.innerHTML = commentsData.map(c => `
+                <div class="comment-row">
+                    <img src="${c.img}" class="avatar">
+                    <div class="comment-text-box">
+                        <div class="text-cyan-400 text-[10px] font-bold uppercase mb-1">${c.user}</div>
+                        <div class="text-sm text-white/80">${c.text}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 const vid = entry.target.querySelector('video');
                 const line = entry.target.querySelector('.progress-line');
                 if (entry.isIntersecting) {
-                    vid.play().catch(e => console.log("Autoplay blocked"));
+                    vid.play();
                     vid.ontimeupdate = () => { line.style.width = (vid.currentTime / vid.duration) * 100 + '%'; };
                 } else {
                     vid.pause(); vid.currentTime = 0;
                 }
             });
-        }, { threshold: 0.7 });
+        }, { threshold: 0.8 });
 
         document.querySelectorAll('.video-card').forEach(c => observer.observe(c));
 
-        // فتح/إغلاق التعليقات
-        function toggleComments() {
-            document.getElementById('commentBox').classList.toggle('active');
-        }
-
-        // تحديث الساعة
         setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+            const d = new Date();
+            document.getElementById('clock').innerText = d.toLocaleTimeString();
         }, 1000);
 
-        // إلغاء كتم الصوت عند أول نقرة
-        window.onclick = () => { 
-            document.querySelectorAll('video').forEach(v => v.muted = false); 
-        };
+        window.onclick = () => { document.querySelectorAll('video').forEach(v => v.muted = false); };
     </script>
 </body>
 </html>
