@@ -2,89 +2,171 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PINK.OS | COW_SERIES</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STUDIO HOMEWORK | SHADOW CINEMA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Orbitron:wght@500;900&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@300;700&display=swap');
-        :root { --p-neon: #ff007f; --p-glow: rgba(255, 0, 127, 0.6); --bg-dark: #050002; }
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg-dark); color: #fff; overflow: hidden; font-family: 'Rajdhani', sans-serif; }
-        .app-container { height: 100vh; width: 100vw; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; }
-        .app-container::-webkit-scrollbar { display: none; }
-        .video-card { height: 100vh; width: 100vw; scroll-snap-align: start; position: relative; display: flex; align-items: center; justify-content: center; background: #000; }
-        .video-wrapper { width: 92%; height: 88%; border-radius: 40px; overflow: hidden; position: relative; transform: scale(0.9); transition: 0.8s all cubic-bezier(0.2, 1, 0.3, 1); border: 1px solid var(--p-neon); box-shadow: 0 0 30px var(--p-glow); }
-        .video-card.active .video-wrapper { transform: scale(1); }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        .side-dock { position: absolute; left: 25px; bottom: 120px; z-index: 100; display: flex; flex-direction: column; gap: 15px; }
-        .dock-item { width: 50px; height: 50px; background: rgba(15, 0, 7, 0.6); backdrop-filter: blur(15px); border-radius: 15px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--p-neon); color: var(--p-neon); cursor: pointer; }
-        .hud-info { position: absolute; bottom: 60px; right: 40px; z-index: 100; text-align: right; pointer-events: none; }
-        .top-header { position: fixed; top: 0; width: 100%; padding: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
+        :root {
+            --primary-color: #ff0000;
+            --bg-dark: #050505;
+            --card-bg: rgba(20, 20, 20, 0.8);
+            --text-glow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Cairo', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* خلفية مزينة بتأثير الغبار الرقمي */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #111 0%, #050505 100%);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* الهيدر الفخم */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            margin: 0;
+            letter-spacing: 5px;
+            background: linear-gradient(to bottom, #fff 0%, #444 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(var(--text-glow));
+        }
+
+        header p {
+            color: var(--primary-color);
+            letter-spacing: 2px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        /* صندوق المشغل الاحترافي */
+        .video-vault {
+            position: relative;
+            background: var(--card-bg);
+            border: 1px solid #222;
+            border-radius: 20px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.05);
+        }
+
+        .video-vault::after {
+            content: "";
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(45deg, var(--primary-color), transparent, var(--primary-color));
+            z-index: -1;
+            border-radius: 22px;
+            opacity: 0.3;
+        }
+
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .iframe-container iframe {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border: none;
+        }
+
+        /* تفاصيل أسفل الفيديو */
+        .video-info {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 15px;
+        }
+
+        .badge {
+            background: var(--primary-color);
+            color: #fff;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .btn-download {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: #fff;
+            padding: 10px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-download:hover {
+            background: var(--primary-color);
+            box-shadow: 0 0 20px var(--primary-color);
+        }
+
+        /* تأثيرات الحركة */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .video-vault { animation: fadeIn 1s ease-out; }
     </style>
 </head>
 <body>
 
-    <div class="top-header">
-        <div>
-            <h1 class="text-3xl font-black italic" style="font-family:'Orbitron'; color: var(--p-neon); text-shadow: 0 0 15px var(--p-glow);">PINK.OS</h1>
-        </div>
-        <div class="text-right">
-            <div id="clock" class="text-xl font-bold opacity-90" style="font-family:'Orbitron';">00:00:00</div>
+<div class="container">
+    <header>
+        <h1>STUDIO HOMEWORK</h1>
+        <p>• SHADOW STREAMING SERVER V99 •</p>
+    </header>
+
+    <div class="video-vault">
+        <div class="iframe-container">
+            <iframe 
+                src="https://mypikpak.com/s/VOmLsWNW-NbOvA9b_54tcn_go2" 
+                allowfullscreen>
+            </iframe>
         </div>
     </div>
 
-    <div class="app-container" id="feed"></div>
+    <div class="video-info">
+        <div>
+            <span class="badge">4K ULTRA HD</span>
+            <h2 style="margin: 10px 0 0 0;">قائمة العرض الحصرية</h2>
+        </div>
+        <a href="#" class="btn-download">تنزيل المحتوى</a>
+    </div>
+</div>
 
-    <script>
-        const pikPakUrl = 'https://mypikpak.com/s/VOmLsWNW-NbOvA9b_54tcn_go2';
-        const cloudName = 'dssk5tabb';
-
-        // تم استبدال الأسماء والحفاظ على الترتيب المطلوب
-        const videoData = [
-            { id: '10_pjxuqz', title: '1cowgirl.mp4' },
-            { id: '14_qb8m0r', title: '2cowgirl.mp4' },
-            { id: 'clinic1_bl7d06', title: '3cowgirl.mp4' },
-            { id: 'clinic2_iysqfw', title: '4cowgirl.mp4' },
-            { id: '02_nz4lq0', title: '5cowgirl.mp4' }
-        ];
-
-        const feed = document.getElementById('feed');
-
-        videoData.forEach((item) => {
-            const card = document.createElement('div');
-            card.className = 'video-card';
-            card.innerHTML = `
-                <div class="video-wrapper">
-                    <video loop playsinline muted src="https://res.cloudinary.com/${cloudName}/video/upload/q_auto,f_auto/${item.id}.mp4"></video>
-                </div>
-                <div class="side-dock">
-                    <div class="dock-item" onclick="window.open('${pikPakUrl}', '_blank')"><i class="fas fa-play"></i></div>
-                    <div class="dock-item" onclick="window.open('${pikPakUrl}', '_blank')"><i class="fas fa-download"></i></div>
-                </div>
-                <div class="hud-info">
-                    <h2 class="text-3xl font-black italic uppercase" style="font-family:'Orbitron'; text-shadow: 0 0 20px var(--p-glow);">${item.title}</h2>
-                    <p class="text-pink-500/80 text-[10px] mt-2 tracking-[4px] font-bold">PIKPAK SOURCE</p>
-                </div>
-            `;
-            feed.appendChild(card);
-        });
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                const vid = entry.target.querySelector('video');
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                    vid.play().catch(() => {});
-                } else {
-                    entry.target.classList.remove('active');
-                    vid.pause();
-                }
-            });
-        }, { threshold: 0.7 });
-
-        document.querySelectorAll('.video-card').forEach(c => observer.observe(c));
-        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('en-US', { hour12: false }); }, 1000);
-    </script>
 </body>
 </html>
