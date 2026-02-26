@@ -3,168 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STUDIO HOMEWORK | SHADOW CINEMA</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Orbitron:wght@500;900&display=swap" rel="stylesheet">
+    <title>STUDIO HOMEWORK | SHADOW V99</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700&family=Orbitron:wght@900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #ff0000;
-            --bg-dark: #050505;
-            --card-bg: rgba(20, 20, 20, 0.8);
-            --text-glow: 0 0 10px rgba(255, 0, 0, 0.5);
+            --fire-red: #ff0000;
+            --deep-void: #020202;
+            --glass: rgba(255, 255, 255, 0.03);
         }
 
         body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-dark);
+            background-color: var(--deep-void);
             color: #fff;
             font-family: 'Cairo', sans-serif;
+            margin: 0;
+            padding: 0;
             overflow-x: hidden;
         }
 
-        /* خلفية مزينة بتأثير الغبار الرقمي */
-        body::before {
-            content: "";
+        /* خلفية سينمائية متحركة */
+        .background-glow {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, #111 0%, #050505 100%);
+            background: radial-gradient(circle at 50% 50%, #110000 0%, #020202 100%);
             z-index: -1;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 40px 20px;
+            padding: 50px 20px;
         }
 
-        /* الهيدر الفخم */
+        /* الهيدر الاحترافي لموقع Studio Homework */
         header {
             text-align: center;
-            margin-bottom: 50px;
+            margin-bottom: 60px;
         }
 
         header h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 3rem;
+            font-size: 3.5rem;
             margin: 0;
-            letter-spacing: 5px;
-            background: linear-gradient(to bottom, #fff 0%, #444 100%);
+            letter-spacing: 8px;
+            background: linear-gradient(to bottom, #fff, #444);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(var(--text-glow));
+            filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.4));
         }
 
         header p {
-            color: var(--primary-color);
-            letter-spacing: 2px;
-            font-weight: bold;
+            color: var(--fire-red);
             text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: 0.9rem;
             margin-top: 10px;
         }
 
-        /* صندوق المشغل الاحترافي */
-        .video-vault {
+        /* إطار المشغل الرئيسي */
+        .main-player-vault {
             position: relative;
-            background: var(--card-bg);
-            border: 1px solid #222;
+            background: var(--glass);
+            border: 1px solid #1a1a1a;
+            border-radius: 30px;
+            padding: 20px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+        }
+
+        .iframe-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 */
+            height: 0;
             border-radius: 20px;
-            padding: 15px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.05);
-        }
-
-        .video-vault::after {
-            content: "";
-            position: absolute;
-            top: -2px; left: -2px; right: -2px; bottom: -2px;
-            background: linear-gradient(45deg, var(--primary-color), transparent, var(--primary-color));
-            z-index: -1;
-            border-radius: 22px;
-            opacity: 0.3;
-        }
-
-        .iframe-container {
-            position: relative;
-            width: 100%;
-            padding-top: 56.25%; /* 16:9 Aspect Ratio */
-            border-radius: 12px;
             overflow: hidden;
+            border: 1px solid #333;
         }
 
-        .iframe-container iframe {
+        .iframe-wrapper iframe {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             border: none;
         }
 
-        /* تفاصيل أسفل الفيديو */
-        .video-info {
-            margin-top: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* قائمة الأفلام الجانبية/السفلية */
+        .movie-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .movie-card {
+            background: #0a0a0a;
+            border: 1px solid #222;
             padding: 20px;
-            background: rgba(255,255,255,0.02);
             border-radius: 15px;
+            text-align: center;
+            transition: all 0.4s ease;
+            cursor: pointer;
         }
 
-        .badge {
-            background: var(--primary-color);
-            color: #fff;
-            padding: 5px 15px;
-            border-radius: 5px;
+        .movie-card:hover {
+            border-color: var(--fire-red);
+            transform: translateY(-10px);
+            background: rgba(255, 0, 0, 0.05);
+            box-shadow: 0 10px 30px rgba(255, 0, 0, 0.2);
+        }
+
+        .movie-card .play-btn {
+            font-size: 1.5rem;
+            color: var(--fire-red);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .movie-card span {
             font-size: 0.8rem;
+            color: #888;
             font-weight: bold;
         }
-
-        .btn-download {
-            background: transparent;
-            border: 2px solid var(--primary-color);
-            color: #fff;
-            padding: 10px 30px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-
-        .btn-download:hover {
-            background: var(--primary-color);
-            box-shadow: 0 0 20px var(--primary-color);
-        }
-
-        /* تأثيرات الحركة */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .video-vault { animation: fadeIn 1s ease-out; }
     </style>
 </head>
 <body>
 
+<div class="background-glow"></div>
+
 <div class="container">
     <header>
         <h1>STUDIO HOMEWORK</h1>
-        <p>• SHADOW STREAMING SERVER V99 •</p>
+        <p>Ultra HD Media Streaming Server</p>
     </header>
 
-    <div class="video-vault">
-        <div class="iframe-container">
-            <iframe 
-                src="https://mypikpak.com/s/VOmLsWNW-NbOvA9b_54tcn_go2" 
-                allowfullscreen>
-            </iframe>
+    <div class="main-player-vault">
+        <div class="iframe-wrapper">
+            <iframe src="https://collection.cloudinary.com/dssk5tabb/38d13a282ddd2f7131580273fefff368" allowfullscreen></iframe>
         </div>
     </div>
 
-    <div class="video-info">
-        <div>
-            <span class="badge">4K ULTRA HD</span>
-            <h2 style="margin: 10px 0 0 0;">قائمة العرض الحصرية</h2>
+    <div class="movie-list">
+        <div class="movie-card">
+            <i class="play-btn">▶</i>
+            <span>1cowgirl.mp4</span>
         </div>
-        <a href="#" class="btn-download">تنزيل المحتوى</a>
+        <div class="movie-card">
+            <i class="play-btn">▶</i>
+            <span>2cowgirl.mp4</span>
+        </div>
+        <div class="movie-card">
+            <i class="play-btn">▶</i>
+            <span>3cowgirl.mp4</span>
+        </div>
+        <div class="movie-card">
+            <i class="play-btn">▶</i>
+            <span>4cowgirl.mp4</span>
+        </div>
+        <div class="movie-card">
+            <i class="play-btn">▶</i>
+            <span>5cowgirl.mp4</span>
+        </div>
     </div>
 </div>
 
