@@ -22,6 +22,7 @@
             overflow: hidden; font-family: 'Rajdhani', sans-serif;
         }
 
+        /* حاوية التمرير */
         .app-container { 
             height: 100vh; width: 100vw;
             overflow-y: scroll; 
@@ -59,11 +60,10 @@
         video { 
             width: 100%; height: 100%; 
             object-fit: cover; 
-            filter: brightness(0.7) contrast(1.1);
-            transition: 0.8s filter;
+            filter: brightness(0.8) contrast(1.1);
         }
-        .active video { filter: brightness(1) contrast(1.1); }
 
+        /* ماسح ضوئي جانبي */
         .side-scanner {
             position: absolute; left: 0; top: 0; width: 2px; height: 100%;
             background: var(--p-neon); box-shadow: 0 0 15px var(--p-neon);
@@ -71,6 +71,7 @@
         }
         @keyframes scanY { from { top: -100%; } to { top: 100%; } }
 
+        /* الأزرار العائمة */
         .side-dock { position: absolute; left: 25px; bottom: 150px; z-index: 100; display: flex; flex-direction: column; gap: 20px; }
         .dock-item {
             width: 55px; height: 55px; 
@@ -95,9 +96,7 @@
 
         .progress-line {
             position: absolute; bottom: 0; left: 0; height: 3px;
-            background: var(--p-neon);
-            width: 0%; z-index: 1000; transition: 0.1s linear;
-            box-shadow: 0 0 10px var(--p-neon);
+            background: var(--p-neon); width: 0%; z-index: 1000;
         }
 
         .top-header {
@@ -111,12 +110,12 @@
 
     <div class="top-header">
         <div>
-            <div class="text-[10px] text-pink-500/50 tracking-[8px] mb-1">PREMIUM INTERFACE</div>
-            <h1 class="text-3xl font-black italic tracking-tighter" style="font-family:'Orbitron'; color: var(--p-neon); text-shadow: 0 0 20px var(--p-glow);">SHΔDØW.OS</h1>
+            <div class="text-[10px] text-pink-500/50 tracking-[8px] mb-1">SHΔDØW CORE ACTIVE</div>
+            <h1 class="text-3xl font-black italic tracking-tighter" style="font-family:'Orbitron'; color: var(--p-neon); text-shadow: 0 0 20px var(--p-glow);">PINK.OS</h1>
         </div>
         <div class="text-right">
             <div id="clock" class="text-xl font-bold opacity-80">00:00:00</div>
-            <div class="text-[9px] text-pink-400 font-bold uppercase tracking-widest">System Stable</div>
+            <div class="text-[9px] text-pink-400 font-bold uppercase tracking-widest">Protocol V99</div>
         </div>
     </div>
 
@@ -124,17 +123,18 @@
 
     <script>
         const cloudName = 'dssk5tabb';
-        // تم استبدال الأسماء حسب طلبك بدقة
+        // قائمة الفيديوهات المحدثة بناءً على طلبك
         const videoData = [
-            { id: '1cowgirl', title: 'Shadow Rider' },
-            { id: '2cowgirl', title: 'Neon Pulse' },
-            { id: '3cowgirl', title: 'Cyber Drift' },
-            { id: '4cowgirl', title: 'Bio-Sync' },
-            { id: '5cowgirl', title: 'Core Protocol' }
+            { id: '1cowgirl', title: 'Elite Pulse 01' },
+            { id: '2cowgirl', title: 'Neon Shadow 02' },
+            { id: '3cowgirl', title: 'Cyber Trace 03' },
+            { id: '4cowgirl', title: 'Logic Flow 04' },
+            { id: '5cowgirl', title: 'Core Final 05' }
         ];
 
         const feed = document.getElementById('feed');
 
+        // بناء العقد البرمجية للفيديوهات
         videoData.forEach((item, index) => {
             const card = document.createElement('div');
             card.className = 'video-card';
@@ -160,6 +160,7 @@
             feed.appendChild(card);
         });
 
+        // مراقب التمرير والتشغيل التلقائي
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 const vid = entry.target.querySelector('video');
@@ -169,7 +170,7 @@
                     entry.target.classList.add('active');
                     vid.play();
                     vid.ontimeupdate = () => { 
-                        if (vid.duration) bar.style.width = (vid.currentTime / vid.duration) * 100 + '%'; 
+                        if(vid.duration) bar.style.width = (vid.currentTime / vid.duration) * 100 + '%'; 
                     };
                 } else {
                     entry.target.classList.remove('active');
@@ -181,10 +182,12 @@
 
         document.querySelectorAll('.video-card').forEach(c => observer.observe(c));
 
+        // تحديث الساعة
         setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString('en-GB', { hour12: false });
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('en-US', { hour12: false });
         }, 1000);
 
+        // إلغاء كتم الصوت عند أول تفاعل
         window.onclick = () => { document.querySelectorAll('video').forEach(v => v.muted = false); };
     </script>
 </body>
