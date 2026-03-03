@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ELYTRA | NEURAL v5.0</title>
+    <title>ELYTRA | ULTIMATE NEURAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -11,187 +11,116 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Plus+Jakarta+Sans:wght@200;400;800&display=swap');
-        
-        :root { --elytra-green: #00ffaa; --glass-core: rgba(0, 255, 170, 0.05); }
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: 'Plus Jakarta Sans', sans-serif; color: white; -webkit-tap-highlight-color: transparent; }
+        :root { --green: #00ffaa; --glass: rgba(0, 255, 170, 0.1); }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: 'Plus Jakarta Sans', sans-serif; color: white; user-select: none; }
         
         .elytra-feed { height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; }
         .elytra-feed::-webkit-scrollbar { display: none; }
         
-        .video-container { height: 100vh; width: 100%; scroll-snap-align: start; position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
-        video { height: 100%; width: 100%; object-fit: cover; filter: contrast(1.1) brightness(0.85); }
+        .video-unit { height: 100vh; width: 100%; scroll-snap-align: start; position: relative; background: #000; overflow: hidden; }
+        video { height: 100%; width: 100%; object-fit: cover; }
 
-        .elytra-nav {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            width: 90%; z-index: 1000; display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 25px; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(25px);
-            border-radius: 20px; border: 1px solid rgba(0, 255, 170, 0.15);
-        }
-        .elytra-logo { font-family: 'Syncopate'; font-size: 20px; color: var(--elytra-green); letter-spacing: 5px; text-shadow: 0 0 15px var(--elytra-green); }
+        /* Progress Bar */
+        .v-progress { position: absolute; top: 0; left: 0; height: 2px; background: var(--green); z-index: 1001; transition: width 0.1s linear; box-shadow: 0 0 10px var(--green); }
 
-        .side-actions { position: absolute; right: 20px; bottom: 120px; display: flex; flex-direction: column; gap: 18px; z-index: 100; }
-        .hologram-btn {
-            width: 60px; height: 60px; background: rgba(0, 5, 2, 0.6); backdrop-filter: blur(20px);
-            border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            border: 1px solid rgba(0, 255, 170, 0.2); cursor: pointer; transition: 0.4s;
-        }
-        .hologram-btn i { font-size: 22px; color: #fff; }
-        .hologram-btn span { font-size: 10px; font-weight: 800; margin-top: 4px; color: var(--elytra-green); }
+        /* Hearts Animation */
+        .heart { position: absolute; pointer-events: none; color: var(--green); font-size: 40px; animation: fly 0.8s ease-out forwards; z-index: 500; }
+        @keyframes fly { 0% { transform: scale(0); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(-100px) scale(1.5); opacity: 0; } }
 
-        .video-meta { position: absolute; left: 25px; bottom: 110px; right: 100px; z-index: 100; pointer-events: none; }
-        .elytra-badge { background: rgba(0, 255, 170, 0.15); backdrop-filter: blur(10px); color: #00ffaa; padding: 6px 18px; border-radius: 30px; border: 1px solid #00ffaa; font-size: 12px; font-weight: 900; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        /* UI Elements */
+        .elytra-header { position: fixed; top: 25px; left: 50%; transform: translateX(-50%); width: 90%; z-index: 1000; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(0,0,0,0.5); backdrop-filter: blur(20px); border-radius: 20px; border: 1px solid var(--glass); }
+        .brand { font-family: 'Syncopate'; font-size: 18px; color: var(--green); letter-spacing: 4px; text-shadow: 0 0 10px var(--green); }
 
-        .hot-indicator { animation: pulse 1s infinite; color: #ff3300; font-size: 10px; font-weight: 900; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .side-stack { position: absolute; right: 15px; bottom: 120px; display: flex; flex-direction: column; gap: 20px; z-index: 100; }
+        .action-circle { width: 55px; height: 55px; background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); border-radius: 50%; border: 1px solid var(--glass); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
+        .action-circle i { font-size: 20px; color: #fff; }
+        .action-circle span { font-size: 9px; font-weight: 800; margin-top: 4px; color: var(--green); }
 
-        .dock-container {
-            position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
-            width: 88%; max-width: 440px; height: 75px; background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(40px); border-radius: 35px; border: 1px solid rgba(0, 255, 170, 0.1);
-            display: flex; justify-content: space-around; align-items: center; z-index: 1000;
-        }
+        .bottom-nav { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 400px; height: 70px; background: rgba(0,0,0,0.7); backdrop-filter: blur(40px); border-radius: 35px; border: 1px solid var(--glass); display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+        .plus-icon { background: var(--green); color: #000; width: 50px; height: 50px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; transition: 0.4s; transform: rotate(45deg); }
+        .plus-icon:hover { transform: rotate(135deg); }
+
+        .meta-box { position: absolute; left: 20px; bottom: 100px; z-index: 100; }
+        .user-pill { background: rgba(0,255,170,0.15); border: 1px solid var(--green); padding: 5px 15px; border-radius: 20px; font-size: 11px; font-weight: 800; color: var(--green); }
         
-        .elytra-upload {
-            background: #00ffaa; color: #000; width: 55px; height: 55px; border-radius: 18px;
-            display: flex; align-items: center; justify-content: center; font-size: 24px;
-            cursor: pointer; transition: 0.4s; transform: rotate(45deg); box-shadow: 0 0 20px rgba(0,255,170,0.4);
-        }
-        .elytra-upload i { transform: rotate(-45deg); }
-
-        .comment-panel {
-            position: fixed; bottom: -100%; left: 0; width: 100%; height: 60vh;
-            background: rgba(5, 5, 5, 0.9); backdrop-filter: blur(50px);
-            border-top: 1px solid rgba(0, 255, 170, 0.2); border-radius: 30px 30px 0 0;
-            z-index: 2000; transition: 0.5s cubic-bezier(0.2, 1, 0.3, 1); padding: 30px; display: flex; flex-direction: column;
-        }
-        .comment-panel.open { bottom: 0; }
-        .comment-stream { flex: 1; overflow-y: scroll; scrollbar-width: none; }
-        .comment-input { width: 100%; background: #111; border: 1px solid #222; padding: 15px; border-radius: 12px; color: white; margin-top: 10px; outline: none; }
-        
-        .watermark { position: absolute; left: 20px; top: 120px; opacity: 0.15; font-family: 'Syncopate'; font-size: 10px; letter-spacing: 5px; animation: float 10s infinite; }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(15px); } }
-
-        .live-views { position: absolute; top: 100px; right: 25px; background: rgba(255,0,0,0.2); border: 1px solid rgba(255,0,0,0.4); padding: 4px 10px; border-radius: 5px; font-size: 10px; font-weight: 900; color: #ff4444; z-index: 50; }
+        /* Floating Text Layer */
+        .neural-info { font-size: 8px; color: rgba(255,255,255,0.2); text-transform: uppercase; margin-top: 10px; letter-spacing: 2px; }
     </style>
 </head>
 <body>
 
-    <div class="watermark">ELYTRA SYSTEM v5.0</div>
-    <div class="live-views" id="viewCount">● LIVE 1.2K</div>
+    <div class="v-progress" id="p-bar"></div>
 
-    <nav class="elytra-nav" id="topNav">
-        <div class="elytra-logo">ELYTRA</div>
-        <div class="text-[9px] font-black opacity-40 tracking-[4px]">NEURAL CORE</div>
+    <nav class="elytra-header">
+        <div class="brand">ELYTRA</div>
+        <div class="flex items-center gap-2"><div class="w-1.5 h-1.5 bg-[#00ffaa] rounded-full animate-ping"></div><span class="text-[8px] opacity-40 font-bold">NEURAL_OS</span></div>
     </nav>
 
-    <div class="elytra-feed" id="main-render"></div>
+    <div class="elytra-feed" id="main-feed"></div>
 
-    <div class="dock-container" id="bottomDock">
-        <i class="fas fa-home-lg-alt text-[#00ffaa] text-xl"></i>
-        <div class="elytra-upload" onclick="startFlow()"><i class="fas fa-plus"></i></div>
-        <i class="fas fa-microchip text-white opacity-30 text-xl"></i>
-    </div>
-
-    <div id="commentPanel" class="comment-panel">
-        <div class="flex justify-between items-center mb-5">
-            <h2 class="font-black text-xl">VOID COMMENTS</h2>
-            <i class="fas fa-times cursor-pointer" onclick="closeComments()"></i>
-        </div>
-        <div class="comment-stream" id="commentStream"></div>
-        <div class="flex gap-2">
-            <input type="text" id="commentInput" class="comment-input" placeholder="Enter neural thought...">
-            <button onclick="postComment()" class="bg-[#00ffaa] text-black px-6 mt-[10px] rounded-12 font-black">SEND</button>
-        </div>
+    <div class="bottom-nav">
+        <i class="fas fa-home-alt text-white opacity-40"></i>
+        <div class="plus-icon" onclick="up()"><i class="fas fa-plus" style="transform: rotate(-45deg)"></i></div>
+        <i class="fas fa-user-circle text-white opacity-40"></i>
     </div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://xkom-a73e4-default-rtdb.firebaseio.com/" };
-        firebase.initializeApp(firebaseConfig);
+        const f_config = { databaseURL: "https://xkom-a73e4-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(f_config);
         const db = firebase.database();
 
-        const AD_LINKS = [
-            "https://www.effectivegatecpm.com/q7bf96ad4p?key=4272e67963ce67f1cfaeb4a56682d6ec",
-            "https://www.effectivegatecpm.com/w6ejwgptb?key=b77b52a8f4f7e4cdd1ac7bccc1b04a4d"
-        ];
+        const ADS = ["https://www.effectivegatecpm.com/q7bf96ad4p?key=4272e67963ce67f1cfaeb4a56682d6ec", "https://www.effectivegatecpm.com/w6ejwgptb?key=b77b52a8f4f7e4cdd1ac7bccc1b04a4d"];
+        function ad(n) { window.open(ADS[n], '_blank'); }
 
-        function callAd(n) { window.open(AD_LINKS[n], '_blank'); }
-
-        const widget = cloudinary.createUploadWidget({
-            cloudName: "dqzjfaqg4", 
-            uploadPreset: "vox_god"
-        }, (err, res) => {
+        const widget = cloudinary.createUploadWidget({ cloudName: "dqzjfaqg4", uploadPreset: "vox_god" }, (err, res) => {
             if (res.event === "success") {
-                db.ref('elytra_v5').push({
-                    url: res.info.secure_url,
-                    tag: "USER_" + Math.floor(Math.random()*9999),
-                    points: Math.floor(Math.random()*200),
-                    time: Date.now()
-                });
+                db.ref('elytra_final').push({ url: res.info.secure_url, user: "U_"+Math.floor(Math.random()*999), likes: 0, time: Date.now() });
             }
         });
+        function up() { widget.open(); }
 
-        function startFlow() { widget.open(); }
+        function showHearts(e) {
+            const h = document.createElement('i');
+            h.className = 'fas fa-heart heart';
+            h.style.left = e.clientX + 'px'; h.style.top = e.clientY + 'px';
+            document.body.appendChild(h);
+            setTimeout(() => h.remove(), 800);
+        }
 
-        let activePost = null;
-
-        function openComments(id) {
-            activePost = id;
-            document.getElementById('commentPanel').classList.add('open');
-            const stream = document.getElementById('commentStream');
-            db.ref(`comments_v5/${id}`).on('value', snap => {
-                stream.innerHTML = '';
-                snap.forEach(c => {
-                    stream.innerHTML += `<div class="mb-3 text-sm"><span class="text-[#00ffaa] font-bold">@Anon:</span> ${c.val().text}</div>`;
+        db.ref('elytra_final').on('value', snap => {
+            const feed = document.getElementById('main-feed');
+            feed.innerHTML = '';
+            let data = []; snap.forEach(c => data.unshift({id: c.key, ...c.val()}));
+            
+            data.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'video-unit';
+                card.innerHTML = `
+                    <video src="${p.url}" loop playsinline></video>
+                    <div class="side-stack">
+                        <div class="action-circle" onclick="ad(0); db.ref('elytra_final/${p.id}').update({likes:${p.likes+1}})">
+                            <i class="fas fa-bolt text-[#00ffaa]"></i><span>${p.likes}</span>
+                        </div>
+                        <div class="action-circle" onclick="ad(1)"><i class="fas fa-comment-dots"></i><span>VOID</span></div>
+                        <div class="action-circle" onclick="ad(0)"><i class="fas fa-paper-plane"></i><span>PUSH</span></div>
+                    </div>
+                    <div class="meta-box">
+                        <div class="user-pill">@${p.user}</div>
+                        <div class="neural-info">Syncing Content // Encryption Alpha_01</div>
+                    </div>
+                `;
+                
+                const vid = card.querySelector('video');
+                vid.addEventListener('timeupdate', () => {
+                    const progress = (vid.currentTime / vid.duration) * 100;
+                    document.getElementById('p-bar').style.width = progress + '%';
                 });
-            });
-        }
-
-        function closeComments() { document.getElementById('commentPanel').classList.remove('open'); }
-
-        function postComment() {
-            const val = document.getElementById('commentInput').value;
-            if(val && activePost) {
-                db.ref(`comments_v5/${activePost}`).push({ text: val });
-                document.getElementById('commentInput').value = '';
-            }
-        }
-
-        // Fake Live View Sync
-        setInterval(() => {
-            const count = (1 + Math.random() * 2).toFixed(1);
-            document.getElementById('viewCount').innerText = `● LIVE ${count}K`;
-        }, 3000);
-
-        db.ref('elytra_v5').on('value', snap => {
-            const render = document.getElementById('main-render');
-            render.innerHTML = '';
-            let list = [];
-            snap.forEach(c => { list.unshift({id: c.key, ...c.val()}); });
-            list.forEach(item => {
-                render.innerHTML += `
-                    <div class="video-container">
-                        <video src="${item.url}" loop playsinline onclick="this.paused?this.play():this.pause()"></video>
-                        <div class="side-actions">
-                            <div class="hologram-btn" onclick="callAd(0); db.ref('elytra_v5/${item.id}').update({points:${item.points+1}})">
-                                <i class="fas fa-bolt text-[#00ffaa]"></i>
-                                <span>${item.points}</span>
-                            </div>
-                            <div class="hologram-btn" onclick="callAd(1); openComments('${item.id}')">
-                                <i class="fas fa-comment-dots"></i>
-                                <span>VOID</span>
-                            </div>
-                            <div class="hologram-btn" onclick="callAd(0)">
-                                <i class="fas fa-share-alt"></i>
-                                <span>PUSH</span>
-                            </div>
-                        </div>
-                        <div class="video-meta">
-                            <div class="elytra-badge">
-                                <i class="fas fa-fire-alt hot-indicator"></i> @${item.tag}
-                            </div>
-                            <p class="text-[10px] font-black opacity-30 tracking-[4px]">NEURAL CORE v5.0 // GLOBAL FEED</p>
-                        </div>
-                    </div>`;
+                card.addEventListener('click', () => vid.paused ? vid.play() : vid.pause());
+                card.addEventListener('dblclick', (e) => {
+                    showHearts(e);
+                    db.ref('elytra_final/'+p.id).update({likes:p.likes+1});
+                });
+                feed.appendChild(card);
             });
         });
     </script>
