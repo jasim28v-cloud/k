@@ -21,7 +21,6 @@
             height: 100%; width: 100%;
         }
 
-        /* حاوية الفيديو العملاقة */
         .app-container { 
             height: 100vh; width: 100vw;
             overflow-y: scroll; scroll-snap-type: y mandatory; 
@@ -34,18 +33,15 @@
             position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
         }
 
-        /* خلفية الفيديو المحسنة */
         .video-wrapper { position: absolute; inset: 0; z-index: 1; }
         video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.8) contrast(1.1); }
 
-        /* تأثيرات الإضاءة السينمائية */
         .overlay-fx {
             position: absolute; inset: 0; z-index: 2;
             background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.8) 100%);
             pointer-events: none;
         }
 
-        /* واجهة الـ HUD (Heads-Up Display) */
         .hud-frame {
             position: absolute; inset: 20px; border: 1px solid rgba(0, 243, 255, 0.1);
             pointer-events: none; z-index: 10; border-radius: 20px;
@@ -57,7 +53,6 @@
         .bottom-left { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
         .bottom-right { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
 
-        /* الأزرار الجانبية الفاخرة */
         .action-dock {
             position: absolute; right: 20px; bottom: 100px; z-index: 100;
             display: flex; flex-direction: column; gap: 15px;
@@ -73,7 +68,6 @@
         .action-btn i { font-size: 1.2rem; margin-bottom: 2px; }
         .action-btn span { font-size: 9px; color: var(--neon-blue); font-weight: 700; }
 
-        /* شريط المعلومات السفلي */
         .info-panel {
             position: absolute; bottom: 40px; left: 30px; z-index: 100;
             max-width: 70%; pointer-events: none;
@@ -85,7 +79,6 @@
             border: 1px solid rgba(0, 243, 255, 0.2); display: inline-block; margin-bottom: 10px;
         }
 
-        /* تصميم الخطوط العريضة */
         .big-title {
             font-family: 'Orbitron'; font-weight: 900; font-size: clamp(2rem, 8vw, 4rem);
             line-height: 0.9; text-transform: uppercase; letter-spacing: -2px;
@@ -93,7 +86,6 @@
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        /* لودر البداية */
         #init-loader {
             position: fixed; inset: 0; background: #000; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -126,57 +118,71 @@
     <main class="app-container" id="feed-engine"></main>
 
     <script>
-        // تفكيك الرابط الذكي
-        const collectionLink = "https://collection.cloudinary.com/dssk5tabb/3f7d9a2f9265b9a008994ca0b5efb125";
-        const accountID = collectionLink.split('/')[3]; 
-        const totalNodes = 27; 
+        const CLOUDINARY_ID = "dfscughol";
+        const FIREBASE_URL = "https://forg-c693e-default-rtdb.firebaseio.com/update_vk.json";
+        const ADS = [
+            "https://www.effectivegatecpm.com/bxwxuk2f39?key=566216691dc8b76a740840e94f68f44c",
+            "https://www.effectivegatecpm.com/k60w64w4gk?key=564f3d8cc4ac85949f218179b742495e"
+        ];
 
         const engine = document.getElementById('feed-engine');
 
-        // بناء الواجهة الضخمة
-        for (let i = 1; i <= totalNodes; i++) {
-            const nodeID = `video${i}`;
-            const section = document.createElement('section');
-            section.className = 'video-card';
-            section.innerHTML = `
-                <div class="hud-frame">
-                    <div class="corner top-left"></div><div class="corner top-right"></div>
-                    <div class="corner bottom-left"></div><div class="corner bottom-right"></div>
-                </div>
-                
-                <div class="video-wrapper">
-                    <video loop playsinline muted src="https://res.cloudinary.com/${accountID}/video/upload/q_auto:best,f_auto/${nodeID}.mp4"></video>
-                </div>
-                <div class="overlay-fx"></div>
-
-                <div class="action-dock">
-                    <div class="action-btn text-white"><i class="fas fa-shield-halved"></i><span>ENCRYPT</span></div>
-                    <div class="action-btn text-red-500"><i class="fas fa-heart"></i><span>${(Math.random()*99).toFixed(1)}K</span></div>
-                    <div class="action-btn text-cyan-400"><i class="fas fa-comment-dots"></i><span>742</span></div>
-                    <div class="action-btn text-white"><i class="fas fa-expand"></i><span>FULL</span></div>
-                </div>
-
-                <div class="info-panel">
-                    <div class="status-badge"><i class="fas fa-satellite-dish mr-2"></i> LIVE_NODE_${i}</div>
-                    <h2 class="big-title">Visual<br>Command ${i}</h2>
-                    <p class="text-white/40 text-[10px] mt-4 tracking-[3px] uppercase">Data Source: ${accountID} // Protocol: Secure_SSL</p>
-                </div>
-
-                <div class="absolute right-10 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 pointer-events-none opacity-20">
-                    <div class="text-[8px] vertical-text uppercase tracking-widest">System Optimization Active</div>
-                    <div class="w-[1px] h-32 bg-white/50"></div>
-                </div>
-            `;
-            engine.appendChild(section);
+        function openAd() {
+            const randomAd = ADS[Math.floor(Math.random() * ADS.length)];
+            window.open(randomAd, '_blank');
         }
 
-        // إخفاء شاشة التحميل
+        async function loadVideos() {
+            try {
+                const response = await fetch(FIREBASE_URL);
+                const data = await response.json();
+                
+                const videoList = Array.isArray(data) ? data : Object.values(data);
+                
+                videoList.forEach((videoName, i) => {
+                    const section = document.createElement('section');
+                    section.className = 'video-card';
+                    section.innerHTML = `
+                        <div class="hud-frame">
+                            <div class="corner top-left"></div><div class="corner top-right"></div>
+                            <div class="corner bottom-left"></div><div class="corner bottom-right"></div>
+                        </div>
+                        
+                        <div class="video-wrapper">
+                            <video loop playsinline muted src="https://res.cloudinary.com/${CLOUDINARY_ID}/video/upload/q_auto,f_auto/${videoName}"></video>
+                        </div>
+                        <div class="overlay-fx"></div>
+
+                        <div class="action-dock">
+                            <div class="action-btn text-white" id="upload-btn"><i class="fas fa-cloud-arrow-up"></i><span>UPLOAD</span></div>
+                            <div class="action-btn text-red-500" onclick="openAd()"><i class="fas fa-heart"></i><span>${(Math.random()*99).toFixed(1)}K</span></div>
+                            <div class="action-btn text-cyan-400" onclick="openAd()"><i class="fas fa-comment-dots"></i><span>${Math.floor(Math.random()*999)}</span></div>
+                            <div class="action-btn text-white" onclick="openAd()"><i class="fas fa-share-nodes"></i><span>SHARE</span></div>
+                        </div>
+
+                        <div class="info-panel">
+                            <div class="status-badge"><i class="fas fa-satellite-dish mr-2"></i> LIVE_NODE_${i+1}</div>
+                            <h2 class="big-title">DATA_STREAM<br>NODE_${i+1}</h2>
+                            <p class="text-white/40 text-[10px] mt-4 tracking-[3px] uppercase">Cloud Sync: Active // Source: ${CLOUDINARY_ID}</p>
+                        </div>
+                    `;
+                    engine.appendChild(section);
+                });
+
+                document.querySelectorAll('.video-card').forEach(card => io.observe(card));
+            } catch (error) {
+                console.error("Error loading stream:", error);
+            }
+        }
+
         window.addEventListener('load', () => {
-            setTimeout(() => document.getElementById('init-loader').style.opacity = '0', 1000);
-            setTimeout(() => document.getElementById('init-loader').style.display = 'none', 1500);
+            loadVideos();
+            setTimeout(() => {
+                document.getElementById('init-loader').style.opacity = '0';
+                setTimeout(() => document.getElementById('init-loader').style.display = 'none', 500);
+            }, 1500);
         });
 
-        // مراقب التشغيل الذكي
         const io = new IntersectionObserver((items) => {
             items.forEach(item => {
                 const v = item.target.querySelector('video');
@@ -186,17 +192,16 @@
                     v.pause(); v.currentTime = 0;
                 }
             });
-        }, { threshold: 0.7 });
+        }, { threshold: 0.6 });
 
-        document.querySelectorAll('.video-card').forEach(card => io.observe(card));
-
-        // الوقت الحي
         setInterval(() => {
             const now = new Date();
-            document.getElementById('live-timer').innerText = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
+            document.getElementById('live-timer').innerText = 
+                String(now.getHours()).padStart(2, '0') + ":" + 
+                String(now.getMinutes()).padStart(2, '0') + ":" + 
+                String(now.getSeconds()).padStart(2, '0');
         }, 1000);
 
-        // تفعيل الصوت عند أول لمسة للموقع
         window.addEventListener('click', () => {
             document.querySelectorAll('video').forEach(v => v.muted = false);
         }, { once: true });
