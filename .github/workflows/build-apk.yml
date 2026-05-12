@@ -1,20 +1,29 @@
-name: 📱 Build SIMRK APK
+name: 🌹 Build Rose Sphere APK
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    name: 🚀 Build Android APK
+    name: 📱 Build Android APK
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 🔧 Generate Files
+        run: python scraper.py
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
@@ -28,42 +37,40 @@ jobs:
           api-level: 34
           build-tools: '34.0.0'
 
+      - name: 📦 Copy Files to Assets
+        run: |
+          mkdir -p android-project/app/src/main/assets/www
+          cp *.html *.js android-project/app/src/main/assets/www/
+
       - name: 🔨 Build APK
         run: |
           cd android-project
           chmod +x gradlew
           ./gradlew assembleRelease
           
-      - name: 📦 Sign APK
+      - name: 🔑 Sign APK
         run: |
-          APK_UNSIGNED="android-project/app/build/outputs/apk/release/app-release-unsigned.apk"
-          APK_SIGNED="SIMRK-Release.apk"
-          
           keytool -genkey -v \
             -keystore release-key.jks \
-            -alias simrk \
+            -alias rosesphere \
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
-            -storepass simrk2026 \
-            -keypass simrk2026 \
-            -dname "CN=SIMRK, OU=App, O=SIMRK, L=World"
+            -storepass rose2026 \
+            -keypass rose2026 \
+            -dname "CN=RoseSphere"
           
           $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
             --ks release-key.jks \
-            --ks-pass pass:simrk2026 \
-            --out $APK_SIGNED \
-            $APK_UNSIGNED
+            --ks-pass pass:rose2026 \
+            --out RoseSphere-Release.apk \
+            android-project/app/build/outputs/apk/release/app-release-unsigned.apk
             
       - name: 📤 Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "SIMRK-Release.apk"
-          name: "💙 SIMRK v${{ github.ref_name }}"
-          body: |
-            ## 💙 SIMRK - Blue Ultra Edition
-            
-            ### 📱 تطبيق أندرويد حقيقي - جميع الملفات داخل الـ APK
-            ### يسلم عليك jasim28v@gmail.com 💙
+          files: "RoseSphere-Release.apk"
+          name: "🌹 Rose Sphere v${{ github.ref_name }}"
+          body: "## 🌹 Rose Sphere APK\n📱 تطبيق أندرويد حقيقي"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
