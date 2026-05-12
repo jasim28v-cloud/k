@@ -1,5 +1,4 @@
-def build_main_yml():
-    return """name: 💙 SIMRK CI/CD
+name: 💙 SIMRK CI/CD
 
 on:
   push:
@@ -54,4 +53,3 @@ jobs:
             echo "  ⚠️ Cloudinary config غير متطابق"
           fi
           echo "  ✅ Admin: jasim28v@gmail.com"
-"""
