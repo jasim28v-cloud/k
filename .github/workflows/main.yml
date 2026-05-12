@@ -1,55 +1,37 @@
-name: 💙 SIMRK CI/CD
+name: 💙 SOREX - Build & Deploy
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  validate:
-    name: ✅ Validate Files
+  build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Checkout
+      - name: 📥 سحب المستودع
         uses: actions/checkout@v4
-
-      - name: 📋 List Files
+        with:
+          fetch-depth: 0
+      
+      - name: 🐍 إعداد Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: 🔧 تشغيل البناء لتوليد الملفات
         run: |
-          echo "📁 جميع ملفات المشروع:"
-          ls -la
-          echo ""
-          echo "📊 إحصائيات:"
-          echo "  - عدد ملفات HTML: $(find . -name '*.html' | wc -l)"
-          echo "  - عدد ملفات JS: $(find . -name '*.js' | wc -l)"
-
-      - name: 🔍 Validate HTML
-        run: |
-          echo "✅ التحقق من وجود جميع الملفات المطلوبة..."
-          for file in index.html auth.html profile.html upload.html chat.html explore.html notifications.html settings.html firebase-config.js; do
-            if [ -f "$file" ]; then
-              echo "  ✅ $file - موجود"
-            else
-              echo "  ❌ $file - مفقود!"
-              exit 1
-            fi
-          done
-          echo ""
-          echo "💙 جميع الملفات موجودة!"
-
-      - name: 🔑 Check Config
-        run: |
-          echo "التحقق من إعدادات Firebase..."
-          if grep -q "mokf-5aef3" firebase-config.js; then
-            echo "  ✅ Firebase: mokf-5aef3"
-          else
-            echo "  ⚠️ Firebase config غير متطابق"
-          fi
-          if grep -q "dwexoyjtv" firebase-config.js; then
-            echo "  ✅ Cloudinary: dwexoyjtv"
-          else
-            echo "  ⚠️ Cloudinary config غير متطابق"
-          fi
-          echo "  ✅ Admin: jasim28v@gmail.com"
+          echo "💙 بدء توليد SOREX..."
+          python scraper.py
+          echo "✅ تم توليد جميع الملفات"
+      
+      - name: 🚀 رفع الملفات إلى GitHub
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "💙 SOREX - Auto Deploy [skip ci]"
+          commit_author: "SOREX Bot 🤖 <actions@github.com>"
+          file_pattern: '*.html *.js *.json'
