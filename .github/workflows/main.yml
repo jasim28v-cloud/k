@@ -1,0 +1,57 @@
+def build_main_yml():
+    return """name: 💙 SIMRK CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: ✅ Validate Files
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📋 List Files
+        run: |
+          echo "📁 جميع ملفات المشروع:"
+          ls -la
+          echo ""
+          echo "📊 إحصائيات:"
+          echo "  - عدد ملفات HTML: $(find . -name '*.html' | wc -l)"
+          echo "  - عدد ملفات JS: $(find . -name '*.js' | wc -l)"
+
+      - name: 🔍 Validate HTML
+        run: |
+          echo "✅ التحقق من وجود جميع الملفات المطلوبة..."
+          for file in index.html auth.html profile.html upload.html chat.html explore.html notifications.html settings.html firebase-config.js; do
+            if [ -f "$file" ]; then
+              echo "  ✅ $file - موجود"
+            else
+              echo "  ❌ $file - مفقود!"
+              exit 1
+            fi
+          done
+          echo ""
+          echo "💙 جميع الملفات موجودة!"
+
+      - name: 🔑 Check Config
+        run: |
+          echo "التحقق من إعدادات Firebase..."
+          if grep -q "mokf-5aef3" firebase-config.js; then
+            echo "  ✅ Firebase: mokf-5aef3"
+          else
+            echo "  ⚠️ Firebase config غير متطابق"
+          fi
+          if grep -q "dwexoyjtv" firebase-config.js; then
+            echo "  ✅ Cloudinary: dwexoyjtv"
+          else
+            echo "  ⚠️ Cloudinary config غير متطابق"
+          fi
+          echo "  ✅ Admin: jasim28v@gmail.com"
+"""
