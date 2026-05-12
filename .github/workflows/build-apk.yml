@@ -25,7 +25,7 @@ jobs:
       - name: 🔧 Generate Files
         run: python scraper.py
 
-      - name: ☕ Setup Java
+      - name: ☕ Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -34,10 +34,9 @@ jobs:
       - name: 🔧 Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 34
-          build-tools: '34.0.0'
+          packages: 'platforms;android-34 build-tools;34.0.0'
 
-      - name: 📦 Copy Files to Assets
+      - name: 📦 Copy Files
         run: |
           mkdir -p android-project/app/src/main/assets/www
           cp *.html *.js android-project/app/src/main/assets/www/
@@ -71,6 +70,5 @@ jobs:
         with:
           files: "RoseSphere-Release.apk"
           name: "🌹 Rose Sphere v${{ github.ref_name }}"
-          body: "## 🌹 Rose Sphere APK\n📱 تطبيق أندرويد حقيقي"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
