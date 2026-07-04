@@ -1,767 +1,192 @@
-name: 📱 Build Professional APK
+name: 🃏 Build APK - Joker Custom
 
 on:
   workflow_dispatch:
     inputs:
       app_name:
-        description: '📱 اسم التطبيق'
+        description: '✏️ اسم التطبيق (اكتبه بنفسك)'
         required: true
         type: string
-        default: 'تطبيقي'
       app_id:
-        description: '🆔 App ID (مثال: com.company.app)'
+        description: '🆔 App ID (مثال: com.myapp.name)'
         required: true
         type: string
-        default: 'com.app.example'
-      app_version:
-        description: '📌 رقم الإصدار'
-        required: true
-        type: string
-        default: '1.0.0'
       app_color:
-        description: '🎨 لون التطبيق #RRGGBB'
+        description: '🎨 لون خلفية الأيقونة (مثال: #ea580c)'
         required: true
+        default: '#ea580c'
         type: string
-        default: '#2196F3'
       app_letter:
-        description: '🔤 حرف الأيقونة'
+        description: '🔤 حرف في وسط الأيقونة'
         required: true
+        default: 'F'
         type: string
-        default: 'A'
-      app_icon:
-        description: '🖼️ اسم ملف الأيقونة PNG (اختياري)'
-        required: false
-        type: string
-        default: ''
-      app_permissions:
-        description: '🔐 الصلاحيات الإضافية'
-        required: false
-        type: string
-        default: ''
-      app_orientation:
-        description: '📐 اتجاه الشاشة'
-        required: true
-        type: choice
-        options:
-          - 'portrait'
-          - 'landscape'
-          - 'both'
-        default: 'portrait'
 
 permissions:
   contents: write
 
-env:
-  APP_NAME: ${{ github.event.inputs.app_name }}
-  APP_ID: ${{ github.event.inputs.app_id }}
-  APP_VERSION: ${{ github.event.inputs.app_version }}
-  APP_COLOR: ${{ github.event.inputs.app_color }}
-  APP_LETTER: ${{ github.event.inputs.app_letter }}
-  APK_PATH: android/app/build/outputs/apk/debug/app-debug.apk
-
 jobs:
-  build:
-    name: 🚀 بناء ${{ github.event.inputs.app_name }}
+  build-apk:
+    name: 📱 Build ${{ github.event.inputs.app_name }} APK
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 تحميل المشروع
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: ☕ إعداد Java 17
+      - name: ☕ Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
-      - name: 🟢 إعداد Node.js
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - name: 🔧 تثبيت الأدوات
+      - name: 📦 Install Tools
         run: |
           npm install -g @capacitor/cli @capacitor/core @capacitor/android
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq imagemagick optipng xmlstarlet
+          sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
 
-      - name: 📁 تجهيز ملفات التطبيق
+      - name: 📁 Create www folder
         run: |
-          # إنشاء المجلدات
           mkdir -p www
-          
-          echo "📦 جاري نسخ ملفات المشروع..."
-          
-          # نسخ الملفات مع استثناءات
-          rsync -av --progress \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='www' \
-            --exclude='android' \
-            --exclude='ios' \
-            --exclude='node_modules' \
-            --exclude='.gitignore' \
-            --exclude='package.json' \
-            --exclude='package-lock.json' \
-            --exclude='*.apk' \
-            --exclude='*.aab' \
-            ./ www/ 2>/dev/null || true
-          
-          # إنشاء index.html احترافي إذا لم يوجد
-          if [ ! -f "www/index.html" ]; then
-            cat > www/index.html << HTMLEOF
-          <!DOCTYPE html>
-          <html lang="ar" dir="rtl">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-              <meta name="theme-color" content="$APP_COLOR">
-              <meta name="apple-mobile-web-app-capable" content="yes">
-              <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-              <title>$APP_NAME</title>
-              <style>
-                  * {
-                      margin: 0;
-                      padding: 0;
-                      box-sizing: border-box;
-                  }
-                  body {
-                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                      display: flex;
-                      justify-content: center;
-                      align-items: center;
-                      min-height: 100vh;
-                      background: linear-gradient(135deg, $APP_COLOR, #000000);
-                      color: white;
-                      text-align: center;
-                      padding: 20px;
-                      user-select: none;
-                      -webkit-user-select: none;
-                      -webkit-tap-highlight-color: transparent;
-                  }
-                  .app-container {
-                      animation: fadeIn 0.5s ease-in-out;
-                  }
-                  .app-icon {
-                      width: 120px;
-                      height: 120px;
-                      background: rgba(255,255,255,0.2);
-                      border-radius: 30px;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      font-size: 60px;
-                      font-weight: bold;
-                      margin: 0 auto 30px;
-                      backdrop-filter: blur(10px);
-                      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-                  }
-                  .app-name {
-                      font-size: 2.5em;
-                      font-weight: 700;
-                      margin-bottom: 15px;
-                      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-                  }
-                  .app-version {
-                      font-size: 1em;
-                      opacity: 0.8;
-                      margin-bottom: 10px;
-                  }
-                  .app-status {
-                      background: rgba(255,255,255,0.2);
-                      padding: 12px 30px;
-                      border-radius: 50px;
-                      font-size: 1.1em;
-                      backdrop-filter: blur(10px);
-                      animation: pulse 2s infinite;
-                  }
-                  @keyframes fadeIn {
-                      from { opacity: 0; transform: translateY(20px); }
-                      to { opacity: 1; transform: translateY(0); }
-                  }
-                  @keyframes pulse {
-                      0%, 100% { opacity: 1; }
-                      50% { opacity: 0.7; }
-                  }
-              </style>
-          </head>
-          <body>
-              <div class="app-container">
-                  <div class="app-icon">$APP_LETTER</div>
-                  <h1 class="app-name">$APP_NAME</h1>
-                  <p class="app-version">الإصدار $APP_VERSION</p>
-                  <div class="app-status">✅ التطبيق يعمل محلياً</div>
-              </div>
-              <script>
-                  // تكوين Cordova/Capacitor
-                  if (window.Capacitor) {
-                      console.log('📱 Capacitor Ready');
-                  }
-                  
-                  // منع السلوك الافتراضي
-                  document.addEventListener('touchmove', function(e) {
-                      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-                          e.preventDefault();
-                      }
-                  }, { passive: false });
-                  
-                  // تحميل التطبيق
-                  window.addEventListener('load', function() {
-                      console.log('✅ $APP_NAME v$APP_VERSION Loaded');
-                  });
-              </script>
-          </body>
-          </html>
-          HTMLEOF
-          fi
-          
-          # إحصائيات
-          TOTAL_FILES=$(find www -type f | wc -l)
-          TOTAL_SIZE=$(du -sh www | cut -f1)
-          echo "📊 عدد الملفات: $TOTAL_FILES"
-          echo "📦 الحجم الإجمالي: $TOTAL_SIZE"
-          
-          # عرض الملفات
-          echo "📋 محتويات التطبيق:"
-          ls -lah www/
+          cp *.html www/ 2>/dev/null || true
+          cp *.js www/ 2>/dev/null || true
+          cp *.json www/ 2>/dev/null || true
+          cp *.svg www/ 2>/dev/null || true
+          cp *.png www/ 2>/dev/null || true
 
-      - name: ⚙️ إعداد Capacitor
+      - name: 📄 Create package.json
         run: |
-          # package.json احترافي
           cat > package.json << EOF
           {
-            "name": "$(echo $APP_ID | tr '.' '-')",
-            "version": "$APP_VERSION",
-            "description": "$APP_NAME - Professional Mobile Application",
+            "name": "${{ github.event.inputs.app_name }}-app",
+            "version": "1.0.0",
+            "description": "${{ github.event.inputs.app_name }} - App",
             "main": "www/index.html",
-            "scripts": {
-              "android": "npx cap sync android && npx cap open android",
-              "build": "npx cap sync android && cd android && ./gradlew assembleDebug"
-            },
             "dependencies": {
               "@capacitor/android": "^6.0.0",
-              "@capacitor/app": "^6.0.0",
               "@capacitor/core": "^6.0.0",
-              "@capacitor/cli": "^6.0.0",
-              "@capacitor/status-bar": "^6.0.0",
-              "@capacitor/splash-screen": "^6.0.0",
-              "@capacitor/network": "^6.0.0",
-              "@capacitor/toast": "^6.0.0",
-              "@capacitor/dialog": "^6.0.0",
-              "@capacitor/share": "^6.0.0"
+              "@capacitor/cli": "^6.0.0"
             }
           }
           EOF
-          
-          # capacitor.config.json احترافي
+
+      - name: ⚙️ Create capacitor.config.json
+        run: |
           cat > capacitor.config.json << EOF
           {
-            "appId": "$APP_ID",
-            "appName": "$APP_NAME",
-            "version": "$APP_VERSION",
+            "appId": "${{ github.event.inputs.app_id }}",
+            "appName": "${{ github.event.inputs.app_name }}",
             "webDir": "www",
-            "bundledWebRuntime": false,
-            "server": {
-              "androidScheme": "file",
-              "iosScheme": "file",
-              "allowNavigation": ["*"],
-              "hostname": "localhost"
-            },
-            "android": {
-              "allowMixedContent": true,
-              "captureInput": true,
-              "webContentsDebuggingEnabled": false,
-              "backgroundColor": "$APP_COLOR",
-              "overrideUserAgent": "APP-$APP_NAME-Android"
-            },
-            "plugins": {
-              "SplashScreen": {
-                "launchShowDuration": 2000,
-                "launchAutoHide": true,
-                "backgroundColor": "$APP_COLOR",
-                "androidSplashResourceName": "splash",
-                "androidScaleType": "CENTER_CROP"
-              },
-              "StatusBar": {
-                "style": "DARK",
-                "backgroundColor": "$APP_COLOR",
-                "overlaysWebView": false
-              }
-            }
+            "server": { "androidScheme": "https" },
+            "android": { "allowMixedContent": true }
           }
           EOF
-          
-          echo "✅ Capacitor config ready"
 
-      - name: 📦 تثبيت المكتبات
-        run: |
-          npm install --legacy-peer-deps
-          echo "✅ Dependencies installed"
+      - name: 📦 Install Dependencies
+        run: npm install
 
-      - name: 🤖 إنشاء مشروع Android
-        run: |
-          npx cap add android
-          echo "✅ Android platform added"
+      - name: 🤖 Add Android Platform
+        run: npx cap add android
 
-      - name: 🎨 معالجة الأيقونة الاحترافية
+      - name: 🎨 أيقونة التطبيق
         run: |
-          # إنشاء جميع مجلدات الأيقونات
-          ICON_DIRS=(
-            "android/app/src/main/res/mipmap-mdpi"
-            "android/app/src/main/res/mipmap-hdpi"
-            "android/app/src/main/res/mipmap-xhdpi"
-            "android/app/src/main/res/mipmap-xxhdpi"
-            "android/app/src/main/res/mipmap-xxxhdpi"
-            "android/app/src/main/res/mipmap-anydpi-v26"
-            "android/app/src/main/res/drawable"
-          )
+          # حذف القديم
+          rm -rf android/app/src/main/res/mipmap-* 2>/dev/null || true
           
-          for dir in "${ICON_DIRS[@]}"; do
-            mkdir -p "$dir"
-          done
+          # إنشاء المجلدات
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           
-          ICON_INPUT="${{ github.event.inputs.app_icon }}"
+          C="${{ github.event.inputs.app_color }}"
+          L="${{ github.event.inputs.app_letter }}"
           
-          # إذا وجدت صورة PNG
-          if [ -n "$ICON_INPUT" ] && [ -f "$ICON_INPUT" ]; then
-            echo "🖼️ معالجة الأيقونة: $ICON_INPUT"
-            
-            # نسخ الصورة الأصلية
-            cp "$ICON_INPUT" android/app/src/main/res/drawable/app_icon.png
-            
-            # تحسين الصورة
-            optipng -o7 android/app/src/main/res/drawable/app_icon.png
-            
-            # إنشاء أحجام مختلفة
-            convert "$ICON_INPUT" -resize 48x48 -gravity center -extent 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert "$ICON_INPUT" -resize 72x72 -gravity center -extent 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert "$ICON_INPUT" -resize 96x96 -gravity center -extent 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert "$ICON_INPUT" -resize 144x144 -gravity center -extent 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert "$ICON_INPUT" -resize 192x192 -gravity center -extent 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            
-            # تحسين الأيقونات
-            for icon in android/app/src/main/res/mipmap-*/ic_launcher.png; do
-              optipng -o7 "$icon"
+          # 🖼️ إذا فيه صورة PNG → استخدمها
+          if [ -f "icon-512.png" ]; then
+            echo "🖼️ استخدام صورتك PNG"
+            for d in hdpi:72 mdpi:48 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+              folder=${d%:*}; size=${d#*:}
+              convert icon-512.png -resize ${size}x${size} android/app/src/main/res/mipmap-${folder}/ic_launcher.png
             done
-            
-            # إنشاء foreground مع الصورة
-            cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <item
-                  android:drawable="@drawable/app_icon"
-                  android:width="108dp"
-                  android:height="108dp"
-                  android:gravity="center"/>
-          </layer-list>
-          EOF
-            
-            echo "✅ تم إنشاء أيقونة من الصورة"
+          
+          # 🎨 ما فيه صورة → لون + حرف
           else
-            echo "🔤 إنشاء أيقونة بالحرف: $APP_LETTER"
+            echo "🎨 إنشاء أيقونة: ${L} على ${C}"
             
-            # إنشاء أيقونة بالحرف
-            convert -size 512x512 xc:"$APP_COLOR" \
-              -fill white \
-              -font "DejaVu-Sans-Bold" \
-              -pointsize 300 \
-              -gravity center \
-              -annotate +0+20 "$APP_LETTER" \
-              android/app/src/main/res/drawable/app_icon.png
+            # XML خلفية
+            cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF2
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
+              <solid android:color="${C}"/>
+          </shape>
+          EOF2
             
-            # إنشاء أحجام مختلفة
-            convert android/app/src/main/res/drawable/app_icon.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert android/app/src/main/res/drawable/app_icon.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert android/app/src/main/res/drawable/app_icon.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert android/app/src/main/res/drawable/app_icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert android/app/src/main/res/drawable/app_icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            
-            # إنشاء foreground بالحرف
-            cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
+            # XML حرف
+            cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF3
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="108dp"
-              android:height="108dp"
-              android:viewportWidth="108"
-              android:viewportHeight="108">
-              <text
-                  android:text="$APP_LETTER"
-                  android:textSize="65dp"
+              android:width="108dp" android:height="108dp">
+              <text android:text="${L}" android:textSize="70dp"
                   android:textColor="#FFFFFF"
                   android:fontFamily="sans-serif-black"
                   android:gravity="center"
-                  android:textAlignment="center"
-                  android:x="54dp"
-                  android:y="72dp"/>
+                  android:x="54dp" android:y="72dp"/>
           </vector>
-          EOF
-          fi
-          
-          # خلفية الأيقونة
-          cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="$APP_COLOR"/>
-          </shape>
-          EOF
-          
-          # أيقونة متكيفة للأندرويد 8+
-          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
+          EOF3
+            
+            # XML Adaptive
+            cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF4'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
               <background android:drawable="@drawable/ic_launcher_background"/>
               <foreground android:drawable="@drawable/ic_launcher_foreground"/>
           </adaptive-icon>
-          EOF
+          EOF4
+            
+            # PNG احتياطي
+            for d in hdpi:72 mdpi:48 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+              folder=${d%:*}; size=${d#*:}
+              convert -size ${size}x${size} xc:"${C}" \
+                -gravity center -pointsize $((size/2)) \
+                -fill white -font DejaVu-Sans-Bold \
+                -annotate 0 "${L}" \
+                android/app/src/main/res/mipmap-${folder}/ic_launcher.png
+            done
+          fi
           
-          echo "✅ الأيقونة الاحترافية جاهزة!"
+          echo "✅ الأيقونة جاهزة!"
 
-      - name: 🎨 تخصيص Android
+      - name: 🎨 اسم التطبيق
         run: |
-          # strings.xml
+          mkdir -p android/app/src/main/res/values
           cat > android/app/src/main/res/values/strings.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
+          <?xml version='1.0' encoding='utf-8'?>
           <resources>
-              <string name="app_name">$APP_NAME</string>
-              <string name="title_activity_main">$APP_NAME</string>
-              <string name="package_name">$APP_ID</string>
-              <string name="custom_url_scheme">$APP_ID</string>
+              <string name="app_name">${{ github.event.inputs.app_name }}</string>
+              <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
           </resources>
           EOF
-          
-          # styles.xml احترافي
-          cat > android/app/src/main/res/values/styles.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                  <item name="colorPrimary">$APP_COLOR</item>
-                  <item name="colorPrimaryDark">$APP_COLOR</item>
-                  <item name="colorAccent">$APP_COLOR</item>
-                  <item name="android:windowBackground">$APP_COLOR</item>
-                  <item name="android:statusBarColor">$APP_COLOR</item>
-                  <item name="android:navigationBarColor">$APP_COLOR</item>
-                  <item name="android:windowLightStatusBar">false</item>
-              </style>
-              
-              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
-                  <item name="android:background">$APP_COLOR</item>
-              </style>
-          </resources>
-          EOF
-          
-          # colors.xml
-          cat > android/app/src/main/res/values/colors.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <color name="colorPrimary">$APP_COLOR</color>
-              <color name="colorPrimaryDark">$APP_COLOR</color>
-              <color name="colorAccent">$APP_COLOR</color>
-          </resources>
-          EOF
-          
-          echo "✅ Android resources customized"
 
-      - name: 🔧 إعداد WebView المحترف
-        run: |
-          MAIN_FILE=$(find android/app/src/main/java -name "MainActivity.java")
-          
-          if [ -f "$MAIN_FILE" ]; then
-            cat > "$MAIN_FILE" << 'JAVAEOF'
-          package com.getcapacitor.myapp;
+      - name: 🔄 Sync Assets
+        run: npx cap sync android
 
-          import android.os.Bundle;
-          import android.view.Window;
-          import android.view.WindowManager;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          import androidx.core.view.WindowCompat;
-          import androidx.core.view.WindowInsetsControllerCompat;
-          import com.getcapacitor.BridgeActivity;
-          import com.getcapacitor.Plugin;
-
-          public class MainActivity extends BridgeActivity {
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  
-                  // إعداد WebView المتقدم
-                  WebView webView = getBridge().getWebView();
-                  WebSettings webSettings = webView.getSettings();
-                  
-                  // JavaScript والتخزين
-                  webSettings.setJavaScriptEnabled(true);
-                  webSettings.setDomStorageEnabled(true);
-                  webSettings.setDatabaseEnabled(true);
-                  webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-                  
-                  // الوصول للملفات المحلية
-                  webSettings.setAllowFileAccess(true);
-                  webSettings.setAllowContentAccess(true);
-                  webSettings.setAllowFileAccessFromFileURLs(true);
-                  webSettings.setAllowUniversalAccessFromFileURLs(true);
-                  
-                  // الوسائط المتعددة
-                  webSettings.setMediaPlaybackRequiresUserGesture(false);
-                  webSettings.setLoadsImagesAutomatically(true);
-                  webSettings.setBlockNetworkImage(false);
-                  
-                  // العرض والتكبير
-                  webSettings.setLoadWithOverviewMode(true);
-                  webSettings.setUseWideViewPort(true);
-                  webSettings.setSupportZoom(false);
-                  webSettings.setBuiltInZoomControls(false);
-                  
-                  // الأمان والمحتوى
-                  webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-                  webSettings.setSaveFormData(true);
-                  
-                  // الأداء
-                  webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
-                  webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NORMAL);
-                  
-                  // WebView Client مخصص
-                  webView.setWebViewClient(new WebViewClient() {
-                      @Override
-                      public void onPageFinished(WebView view, String url) {
-                          super.onPageFinished(view, url);
-                          // إخفاء شاشة البداية بعد التحميل
-                          bridge.triggerWindowJSEvent("appLoaded");
-                      }
-                  });
-                  
-                  // ملء الشاشة
-                  Window window = getWindow();
-                  window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-                  window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-                  window.setStatusBarColor(android.graphics.Color.parseColor("$APP_COLOR"));
-              }
-              
-              @Override
-              public void onBackPressed() {
-                  WebView webView = getBridge().getWebView();
-                  if (webView.canGoBack()) {
-                      webView.goBack();
-                  } else {
-                      super.onBackPressed();
-                  }
-              }
-          }
-          JAVAEOF
-            
-            # استبدال المتغيرات
-            sed -i "s|\$APP_COLOR|$APP_COLOR|g" "$MAIN_FILE"
-            sed -i "s|\$APP_NAME|$APP_NAME|g" "$MAIN_FILE"
-            
-            echo "✅ WebView configured professionally"
-          fi
-
-      - name: 🔐 إعداد AndroidManifest
-        run: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          
-          # نسخ احتياطي
-          cp "$MANIFEST" "${MANIFEST}.backup"
-          
-          # إزالة application وإعادة بنائه
-          sed -i '/<application/,/<\/application>/c\TEMP_PLACEHOLDER' "$MANIFEST"
-          
-          # استخراج الصلاحيات
-          PERMISSIONS=$(grep '<uses-permission' "$MANIFEST" || true)
-          
-          # إعادة بناء المانيفست
-          cat > "$MANIFEST" << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="$APP_ID">
-              
-              <!-- صلاحيات الإنترنت -->
-              <uses-permission android:name="android.permission.INTERNET"/>
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-              
-              <!-- صلاحيات التخزين -->
-              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
-              <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
-              
-              <!-- صلاحيات الكاميرا -->
-              <uses-permission android:name="android.permission.CAMERA"/>
-              
-              <!-- صلاحيات الإشعارات -->
-              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-              
-              <!-- صلاحيات أخرى -->
-              <uses-permission android:name="android.permission.VIBRATE"/>
-              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-              <uses-permission android:name="android.permission.WAKE_LOCK"/>
-              
-              <application
-                  android:allowBackup="true"
-                  android:icon="@mipmap/ic_launcher"
-                  android:label="@string/app_name"
-                  android:roundIcon="@mipmap/ic_launcher"
-                  android:supportsRtl="true"
-                  android:theme="@style/AppTheme"
-                  android:usesCleartextTraffic="true"
-                  android:networkSecurityConfig="@xml/network_security_config"
-                  android:hardwareAccelerated="true"
-                  android:largeHeap="true"
-                  android:extractNativeLibs="true">
-                  
-                  <activity
-                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
-                      android:name="com.getcapacitor.myapp.MainActivity"
-                      android:label="@string/title_activity_main"
-                      android:theme="@style/AppTheme.NoActionBarLaunch"
-                      android:launchMode="singleTask"
-                      android:exported="true"
-                      android:screenOrientation="${{ github.event.inputs.app_orientation }}"
-                      android:windowSoftInputMode="adjustResize">
-                      
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                      
-                      <intent-filter>
-                          <action android:name="android.intent.action.VIEW"/>
-                          <category android:name="android.intent.category.DEFAULT"/>
-                          <category android:name="android.intent.category.BROWSABLE"/>
-                          <data android:scheme="$APP_ID"/>
-                      </intent-filter>
-                  </activity>
-                  
-                  <provider
-                      android:name="androidx.core.content.FileProvider"
-                      android:authorities="${APP_ID}.fileprovider"
-                      android:exported="false"
-                      android:grantUriPermissions="true">
-                      <meta-data
-                          android:name="android.support.FILE_PROVIDER_PATHS"
-                          android:resource="@xml/file_paths"/>
-                  </provider>
-              </application>
-          </manifest>
-          EOF
-          
-          # إنشاء network_security_config.xml
-          mkdir -p android/app/src/main/res/xml
-          cat > android/app/src/main/res/xml/network_security_config.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <network-security-config>
-              <base-config cleartextTrafficPermitted="true">
-                  <trust-anchors>
-                      <certificates src="system"/>
-                  </trust-anchors>
-              </base-config>
-              <domain-config cleartextTrafficPermitted="true">
-                  <domain includeSubdomains="true">localhost</domain>
-                  <domain includeSubdomains="true">10.0.2.2</domain>
-              </domain-config>
-          </network-security-config>
-          EOF
-          
-          # إنشاء file_paths.xml
-          cat > android/app/src/main/res/xml/file_paths.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <paths>
-              <files-path name="files" path="."/>
-              <cache-path name="cache" path="."/>
-              <external-path name="external" path="."/>
-              <external-files-path name="external_files" path="."/>
-              <external-cache-path name="external_cache" path="."/>
-          </paths>
-          EOF
-          
-          echo "✅ AndroidManifest configured"
-
-      - name: 🔧 إعداد Gradle
-        run: |
-          # build.gradle
-          BUILD_GRADLE="android/app/build.gradle"
-          
-          if [ -f "$BUILD_GRADLE" ]; then
-            # تحديث الإصدار
-            sed -i "s/versionCode .*/versionCode 1/" "$BUILD_GRADLE"
-            sed -i "s/versionName .*/versionName \"$APP_VERSION\"/" "$BUILD_GRADLE"
-            
-            # إضافة خيارات البناء
-            if ! grep -q "ndk" "$BUILD_GRADLE"; then
-              cat >> "$BUILD_GRADLE" << EOF
-          
-          android {
-              buildTypes {
-                  release {
-                      minifyEnabled true
-                      shrinkResources true
-                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-                  }
-              }
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-          }
-          EOF
-            fi
-          fi
-          
-          echo "✅ Gradle configured"
-
-      - name: 🔄 مزامنة المشروع
-        run: |
-          npx cap sync android
-          echo "✅ Project synced"
-
-      - name: 🔨 بناء APK
+      - name: 🔨 Build APK
         run: |
           cd android
           chmod +x gradlew
-          
-          echo "🔨 جاري بناء APK..."
-          ./gradlew assembleDebug --no-daemon --warning-mode all
-          
-          echo "✅ Build complete"
+          ./gradlew assembleDebug
 
-      - name: 📊 معلومات APK
-        run: |
-          if [ -f "$APK_PATH" ]; then
-            echo "╔══════════════════════════════════════╗"
-            echo "║     🎉 تم بناء التطبيق بنجاح!       ║"
-            echo "╠══════════════════════════════════════╣"
-            echo "║ 📱 الاسم: $APP_NAME"
-            echo "║ 🆔 App ID: $APP_ID"
-            echo "║ 📌 الإصدار: $APP_VERSION"
-            echo "║ 📦 الحجم: $(du -h $APK_PATH | cut -f1)"
-            echo "║ ✅ Offline: يعمل بدون إنترنت"
-            echo "╚══════════════════════════════════════╝"
-          else
-            echo "❌ فشل بناء APK"
-            exit 1
-          fi
-
-      - name: 📤 رفع APK
+      - name: 📤 Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.inputs.app_name }}-v${{ github.event.inputs.app_version }}-APK
-          path: ${{ env.APK_PATH }}
-          retention-days: 90
-          compression-level: 9
-
-      - name: 🎊 إكتمال
-        run: |
-          echo ""
-          echo "🌟══════════════════════════════════════🌟"
-          echo "   🎉 تم بناء APK احترافي بنجاح!"
-          echo "🌟══════════════════════════════════════🌟"
-          echo ""
-          echo "📱 تطبيق: $APP_NAME"
-          echo "📦 الإصدار: $APP_VERSION"
-          echo "🆔 App ID: $APP_ID"
-          echo ""
-          echo "📥 حمّل التطبيق من قسم Artifacts"
-          echo ""
+          name: ${{ github.event.inputs.app_name }}-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
