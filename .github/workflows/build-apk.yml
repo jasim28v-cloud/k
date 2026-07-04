@@ -6,50 +6,30 @@ on:
       app_name:
         description: '📱 اسم التطبيق'
         required: true
-        default: 'FLARE'
-        type: choice
-        options:
-          - 'LEGACY'
-          - 'VIOLET'
-          - 'GREEN'
-          - 'FLARE'
+        default: 'جوكر'
+        type: string
       app_id:
         description: '🆔 App ID'
         required: true
-        default: 'com.flare.orange'
-        type: choice
-        options:
-          - 'com.legacy.gold'
-          - 'com.violet.purple'
-          - 'com.green.emerald'
-          - 'com.flare.orange'
+        default: 'com.joker.app'
+        type: string
       app_color:
-        description: '🎨 لون الأيقونة'
+        description: '🎨 لون الأيقونة (مثال: #FF0000 للأحمر)'
         required: true
-        default: '#ea580c'
-        type: choice
-        options:
-          - '#d4a843'
-          - '#7c3aed'
-          - '#059669'
-          - '#ea580c'
+        default: '#FF0000'
+        type: string
       app_letter:
-        description: '🔤 حرف الأيقونة'
+        description: '🔤 حرف الأيقونة في المنتصف'
         required: true
-        default: 'F'
-        type: choice
-        options:
-          - 'L'
-          - 'V'
-          - 'G'
-          - 'F'
+        default: 'ج'
+        type: string
 
 permissions:
   contents: write
 
 jobs:
   build-apk:
-    name: 📱 Build ${{ github.event.inputs.app_name }} APK
+    name: 📱 بناء تطبيق ${{ github.event.inputs.app_name }}
     runs-on: ubuntu-latest
     
     steps:
@@ -67,10 +47,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 📦 Install Capacitor
+      - name: 📦 تثبيت Capacitor
         run: npm install -g @capacitor/cli @capacitor/core @capacitor/android
 
-      - name: 📁 Create www folder
+      - name: 📁 تجهيز مجلد www
         run: |
           mkdir -p www
           cp *.html www/ 2>/dev/null || true
@@ -78,14 +58,16 @@ jobs:
           cp *.json www/ 2>/dev/null || true
           cp *.svg www/ 2>/dev/null || true
           cp *.png www/ 2>/dev/null || true
+          cp *.jpg www/ 2>/dev/null || true
+          cp *.jpeg www/ 2>/dev/null || true
 
-      - name: 📄 Create package.json
+      - name: 📄 إنشاء package.json
         run: |
           cat > package.json << EOF
           {
-            "name": "${{ github.event.inputs.app_name }}-app",
+            "name": "${{ github.event.inputs.app_name }}",
             "version": "1.0.0",
-            "description": "${{ github.event.inputs.app_name }} - App",
+            "description": "تطبيق ${{ github.event.inputs.app_name }}",
             "main": "www/index.html",
             "dependencies": {
               "@capacitor/android": "^6.0.0",
@@ -95,7 +77,7 @@ jobs:
           }
           EOF
 
-      - name: ⚙️ Create capacitor.config.json
+      - name: ⚙️ إنشاء capacitor.config.json
         run: |
           cat > capacitor.config.json << EOF
           {
@@ -107,16 +89,21 @@ jobs:
           }
           EOF
 
-      - name: 📦 Install Dependencies
+      - name: 📦 تثبيت المكتبات
         run: npm install
 
-      - name: 🤖 Add Android Platform
+      - name: 🤖 إضافة منصة Android
         run: npx cap add android
 
-      - name: 🎨 Generate Custom Icon
+      - name: 🎨 إنشاء أيقونة مخصصة
         run: |
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           
           cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
@@ -136,6 +123,7 @@ jobs:
                   android:textColor="#FFFFFF"
                   android:fontFamily="sans-serif-black"
                   android:gravity="center"
+                  android:textAlignment="center"
                   android:x="54dp"
                   android:y="72dp"/>
           </vector>
@@ -149,9 +137,9 @@ jobs:
           </adaptive-icon>
           EOF
           
-          echo "✅ ${{ github.event.inputs.app_name }} أيقونة جاهزة!"
+          echo "✅ تم إنشاء أيقونة ${{ github.event.inputs.app_name }}!"
 
-      - name: 🎨 Customize Android Strings
+      - name: 🎨 تخصيص اسم التطبيق
         run: |
           mkdir -p android/app/src/main/res/values
           cat > android/app/src/main/res/values/strings.xml << EOF
@@ -162,16 +150,16 @@ jobs:
           </resources>
           EOF
 
-      - name: 🔄 Sync Assets
+      - name: 🔄 مزامنة الملفات
         run: npx cap sync android
 
-      - name: 🔨 Build APK
+      - name: 🔨 بناء APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: 📤 Upload APK
+      - name: 📤 رفع ملف APK
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.inputs.app_name }}-APK
