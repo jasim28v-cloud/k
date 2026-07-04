@@ -1,48 +1,18 @@
-name: 🃏 Build APK - Joker (All Sites)
+name: 🃏 Build APK - Any Project + Custom Icon
 
 on:
   workflow_dispatch:
     inputs:
       app_name:
-        description: '📱 اسم التطبيق'
+        description: '✏️ اسم التطبيق (اكتبه بنفسك)'
         required: true
-        default: 'FLARE'
-        type: choice
-        options:
-          - 'LEGACY'
-          - 'VIOLET'
-          - 'GREEN'
-          - 'FLARE'
+        default: 'My App'
+        type: string
       app_id:
-        description: '🆔 App ID'
+        description: '🆔 App ID (مثال: com.myapp.name)'
         required: true
-        default: 'com.flare.orange'
-        type: choice
-        options:
-          - 'com.legacy.gold'
-          - 'com.violet.purple'
-          - 'com.green.emerald'
-          - 'com.flare.orange'
-      app_color:
-        description: '🎨 لون الأيقونة'
-        required: true
-        default: '#ea580c'
-        type: choice
-        options:
-          - '#d4a843'
-          - '#7c3aed'
-          - '#059669'
-          - '#ea580c'
-      app_letter:
-        description: '🔤 حرف الأيقونة'
-        required: true
-        default: 'F'
-        type: choice
-        options:
-          - 'L'
-          - 'V'
-          - 'G'
-          - 'F'
+        default: 'com.myapp.name'
+        type: string
 
 permissions:
   contents: write
@@ -67,25 +37,30 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 📦 Install Capacitor
-        run: npm install -g @capacitor/cli @capacitor/core @capacitor/android
+      - name: 📦 Install Capacitor + Image Tools
+        run: |
+          npm install -g @capacitor/cli @capacitor/core @capacitor/android
+          sudo apt-get update && sudo apt-get install -y imagemagick
 
       - name: 📁 Create www folder
         run: |
           mkdir -p www
           cp *.html www/ 2>/dev/null || true
           cp *.js www/ 2>/dev/null || true
+          cp *.css www/ 2>/dev/null || true
           cp *.json www/ 2>/dev/null || true
           cp *.svg www/ 2>/dev/null || true
           cp *.png www/ 2>/dev/null || true
+          cp *.jpg www/ 2>/dev/null || true
+          echo "✅ www ready!"
+          ls www/
 
       - name: 📄 Create package.json
         run: |
           cat > package.json << EOF
           {
-            "name": "${{ github.event.inputs.app_name }}-app",
+            "name": "app",
             "version": "1.0.0",
-            "description": "${{ github.event.inputs.app_name }} - App",
             "main": "www/index.html",
             "dependencies": {
               "@capacitor/android": "^6.0.0",
@@ -102,7 +77,7 @@ jobs:
             "appId": "${{ github.event.inputs.app_id }}",
             "appName": "${{ github.event.inputs.app_name }}",
             "webDir": "www",
-            "server": { "androidScheme": "https" },
+            "server": { "androidScheme": "https", "allowNavigation": ["*"] },
             "android": { "allowMixedContent": true }
           }
           EOF
@@ -113,25 +88,43 @@ jobs:
       - name: 🤖 Add Android Platform
         run: npx cap add android
 
-      - name: 🎨 Generate Custom Icon
+      - name: 🖼️ Set App Icon
         run: |
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
           
-          cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
+          # هل فيه icon-512.png؟
+          if [ -f "icon-512.png" ]; then
+            echo "🖼️ استخدام صورتك: icon-512.png"
+            convert icon-512.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert icon-512.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert icon-512.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert icon-512.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert icon-512.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            echo "✅ صورتك جاهزة!"
+          else
+            echo "🔤 لا توجد صورة - استخدام حرف"
+            LETTER=$(echo "${{ github.event.inputs.app_name }}" | cut -c1)
+            
+            cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF2
           <?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="${{ github.event.inputs.app_color }}"/>
+              <solid android:color="#ea580c"/>
           </shape>
-          EOF
-          
-          cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
+          EOF2
+            
+            cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF3
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="108dp"
               android:height="108dp">
               <text
-                  android:text="${{ github.event.inputs.app_letter }}"
+                  android:text="${LETTER}"
                   android:textSize="65dp"
                   android:textColor="#FFFFFF"
                   android:fontFamily="sans-serif-black"
@@ -139,26 +132,25 @@ jobs:
                   android:x="54dp"
                   android:y="72dp"/>
           </vector>
-          EOF
-          
-          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
+          EOF3
+            
+            cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF4'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
               <background android:drawable="@drawable/ic_launcher_background"/>
               <foreground android:drawable="@drawable/ic_launcher_foreground"/>
           </adaptive-icon>
-          EOF
-          
-          echo "✅ ${{ github.event.inputs.app_name }} أيقونة جاهزة!"
+          EOF4
+            echo "✅ حرف ${LETTER} جاهز!"
+          fi
 
-      - name: 🎨 Customize Android Strings
+      - name: 🎨 Configure Android
         run: |
           mkdir -p android/app/src/main/res/values
           cat > android/app/src/main/res/values/strings.xml << EOF
           <?xml version='1.0' encoding='utf-8'?>
           <resources>
               <string name="app_name">${{ github.event.inputs.app_name }}</string>
-              <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
           </resources>
           EOF
 
