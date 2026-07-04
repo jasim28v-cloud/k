@@ -1,23 +1,23 @@
-name: 🃏 Build APK
+name: 🃏 Build APK - Joker Custom
 
 on:
   workflow_dispatch:
     inputs:
       app_name:
-        description: '📱 اسم التطبيق'
+        description: '✏️ اسم التطبيق (اكتبه بنفسك)'
         required: true
         type: string
       app_id:
-        description: '🆔 App ID'
+        description: '🆔 App ID (مثال: com.myapp.name)'
         required: true
         type: string
       app_color:
-        description: '🎨 لون الأيقونة'
+        description: '🎨 لون خلفية الأيقونة (مثال: #ea580c)'
         required: true
         default: '#ea580c'
         type: string
       app_letter:
-        description: '🔤 حرف الأيقونة'
+        description: '🔤 حرف في وسط الأيقونة'
         required: true
         default: 'F'
         type: string
@@ -26,71 +26,154 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-apk:
+    name: 📱 Build ${{ github.event.inputs.app_name }} APK
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { distribution: 'temurin', java-version: '17' }
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
 
-      - run: npm install -g @capacitor/cli @capacitor/core @capacitor/android
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-      - run: |
-          mkdir -p www
-          for f in *.html *.js *.css *.json *.svg *.png; do cp $f www/ 2>/dev/null || true; done
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - run: |
-          echo '{"name":"app","version":"1.0.0","main":"www/index.html","dependencies":{"@capacitor/android":"^6.0.0","@capacitor/core":"^6.0.0","@capacitor/cli":"^6.0.0"}}' > package.json
-          echo "{\"appId\":\"${{ github.event.inputs.app_id }}\",\"appName\":\"${{ github.event.inputs.app_name }}\",\"webDir\":\"www\",\"server\":{\"androidScheme\":\"https\"},\"android\":{\"allowMixedContent\":true}}" > capacitor.config.json
-
-      - run: npm install
-      - run: npx cap add android
-
-      - name: ICON
+      - name: 📦 Install Capacitor + ImageMagick
         run: |
+          npm install -g @capacitor/cli @capacitor/core @capacitor/android
+          sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+
+      - name: 📁 Create www folder
+        run: |
+          mkdir -p www
+          cp *.html www/ 2>/dev/null || true
+          cp *.js www/ 2>/dev/null || true
+          cp *.json www/ 2>/dev/null || true
+          cp *.svg www/ 2>/dev/null || true
+          cp *.png www/ 2>/dev/null || true
+
+      - name: 📄 Create package.json
+        run: |
+          cat > package.json << EOF
+          {
+            "name": "${{ github.event.inputs.app_name }}-app",
+            "version": "1.0.0",
+            "description": "${{ github.event.inputs.app_name }} - App",
+            "main": "www/index.html",
+            "dependencies": {
+              "@capacitor/android": "^6.0.0",
+              "@capacitor/core": "^6.0.0",
+              "@capacitor/cli": "^6.0.0"
+            }
+          }
+          EOF
+
+      - name: ⚙️ Create capacitor.config.json
+        run: |
+          cat > capacitor.config.json << EOF
+          {
+            "appId": "${{ github.event.inputs.app_id }}",
+            "appName": "${{ github.event.inputs.app_name }}",
+            "webDir": "www",
+            "server": { "androidScheme": "https" },
+            "android": { "allowMixedContent": true }
+          }
+          EOF
+
+      - name: 📦 Install Dependencies
+        run: npm install
+
+      - name: 🤖 Add Android Platform
+        run: npx cap add android
+
+      - name: 🎨 أيقونة - لون + حرف + PNG
+        run: |
+          # حذف الأيقونات القديمة
+          rm -rf android/app/src/main/res/mipmap-*
+          
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          
           C="${{ github.event.inputs.app_color }}"
           L="${{ github.event.inputs.app_letter }}"
           
-          # delete old
-          rm -rf android/app/src/main/res/mipmap-*
+          # 🎨 لون الخلفية
+          cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
+              <solid android:color="${C}"/>
+          </shape>
+          EOF
           
-          # make folders
-          for d in hdpi mdpi xhdpi xxhdpi xxxhdpi; do
-            mkdir -p android/app/src/main/res/mipmap-$d
-          done
-          mkdir -p android/app/src/main/res/drawable
-          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          # 🔤 حرف في المنتصف
+          cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp">
+              <text
+                  android:text="${L}"
+                  android:textSize="65dp"
+                  android:textColor="#FFFFFF"
+                  android:fontFamily="sans-serif-black"
+                  android:gravity="center"
+                  android:x="54dp"
+                  android:y="72dp"/>
+          </vector>
+          EOF
           
-          # background
-          echo "<?xml version=\"1.0\" encoding=\"utf-8\"?><shape xmlns:android=\"http://schemas.android.com/apk/res/android\"><solid android:color=\"$C\"/></shape>" > android/app/src/main/res/drawable/ic_launcher_background.xml
+          # ربط الطبقتين
+          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_launcher_background"/>
+              <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+          </adaptive-icon>
+          EOF
           
-          # foreground
-          echo "<?xml version=\"1.0\" encoding=\"utf-8\"?><vector xmlns:android=\"http://schemas.android.com/apk/res/android\" android:width=\"108dp\" android:height=\"108dp\"><text android:text=\"$L\" android:textSize=\"65dp\" android:textColor=\"#FFFFFF\" android:fontFamily=\"sans-serif-black\" android:gravity=\"center\" android:x=\"54dp\" android:y=\"72dp\"/></vector>" > android/app/src/main/res/drawable/ic_launcher_foreground.xml
+          # 🖼️ PNG احتياطي لكل الأحجام (يمنع ظهور شعار أندرويد)
+          convert -size 48x48 xc:"${C}" -gravity center -pointsize 28 -fill white -font DejaVu-Sans-Bold -annotate 0 "${L}" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert -size 72x72 xc:"${C}" -gravity center -pointsize 40 -fill white -font DejaVu-Sans-Bold -annotate 0 "${L}" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert -size 96x96 xc:"${C}" -gravity center -pointsize 52 -fill white -font DejaVu-Sans-Bold -annotate 0 "${L}" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert -size 144x144 xc:"${C}" -gravity center -pointsize 76 -fill white -font DejaVu-Sans-Bold -annotate 0 "${L}" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert -size 192x192 xc:"${C}" -gravity center -pointsize 100 -fill white -font DejaVu-Sans-Bold -annotate 0 "${L}" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           
-          # adaptive
-          echo "<?xml version=\"1.0\" encoding=\"utf-8\"?><adaptive-icon xmlns:android=\"http://schemas.android.com/apk/res/android\"><background android:drawable=\"@drawable/ic_launcher_background\"/><foreground android:drawable=\"@drawable/ic_launcher_foreground\"/></adaptive-icon>" > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-          
-          # png for all sizes
-          convert -size 48x48 xc:"$C" -gravity center -pointsize 28 -fill white -font DejaVu-Sans-Bold -annotate 0 "$L" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert -size 72x72 xc:"$C" -gravity center -pointsize 40 -fill white -font DejaVu-Sans-Bold -annotate 0 "$L" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert -size 96x96 xc:"$C" -gravity center -pointsize 52 -fill white -font DejaVu-Sans-Bold -annotate 0 "$L" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert -size 144x144 xc:"$C" -gravity center -pointsize 76 -fill white -font DejaVu-Sans-Bold -annotate 0 "$L" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert -size 192x192 xc:"$C" -gravity center -pointsize 100 -fill white -font DejaVu-Sans-Bold -annotate 0 "$L" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          
-          echo "DONE"
+          echo "✅ أيقونة ${L} على ${C} جاهزة!"
 
-      - run: |
+      - name: 🎨 اسم التطبيق
+        run: |
           mkdir -p android/app/src/main/res/values
-          echo "<?xml version=\"1.0\" encoding=\"utf-8\"?><resources><string name=\"app_name\">${{ github.event.inputs.app_name }}</string></resources>" > android/app/src/main/res/values/strings.xml
+          cat > android/app/src/main/res/values/strings.xml << EOF
+          <?xml version='1.0' encoding='utf-8'?>
+          <resources>
+              <string name="app_name">${{ github.event.inputs.app_name }}</string>
+              <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
+          </resources>
+          EOF
 
-      - run: npx cap sync android
-      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+      - name: 🔄 Sync Assets
+        run: npx cap sync android
 
-      - uses: actions/upload-artifact@v4
+      - name: 🔨 Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: 📤 Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.inputs.app_name }}-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
