@@ -23,56 +23,77 @@ on:
         required: false
         default: '#FFFFFF'
         type: string
+      app_version:
+        description: '📌 إصدار التطبيق'
+        required: false
+        default: '1.0.0'
+        type: string
+      app_version_code:
+        description: '🔢 رمز الإصدار (رقم صحيح)'
+        required: false
+        default: '1'
+        type: string
 
 permissions:
   contents: write
 
 jobs:
   build-apk:
-    name: 📱 Build ${{ github.event.inputs.app_name }} APK
+    name: 📱 بناء ${{ github.event.inputs.app_name }} APK
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Checkout
+      - name: 📥 استنساخ المستودع
         uses: actions/checkout@v4
 
-      - name: ☕ Setup Java
+      - name: ☕ إعداد Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🟢 Setup Node.js
+      - name: 🟢 إعداد Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: 📦 Install Tools
+      - name: 📦 تثبيت الأدوات
         run: |
           npm install -g @capacitor/cli @capacitor/core @capacitor/android
-          sudo apt-get update -qq && sudo apt-get install -y imagemagick
+          sudo apt-get update -qq
+          sudo apt-get install -y imagemagick
 
-      - name: 📁 Create www folder
+      - name: 📁 تحضير محتوى التطبيق
         run: |
+          # إنشاء مجلد www
           mkdir -p www
-          cp *.html www/ 2>/dev/null || true
-          cp *.js www/ 2>/dev/null || true
-          cp *.css www/ 2>/dev/null || true
-          cp *.json www/ 2>/dev/null || true
-          cp *.svg www/ 2>/dev/null || true
-          cp *.png www/ 2>/dev/null || true
-          cp *.jpg www/ 2>/dev/null || true
-          cp *.jpeg www/ 2>/dev/null || true
-          cp *.webp www/ 2>/dev/null || true
+          
+          # نسخ جميع ملفات المشروع
+          cp *.html www/ 2>/dev/null || echo "⚠️ لا توجد ملفات HTML"
+          cp *.js www/ 2>/dev/null || echo "⚠️ لا توجد ملفات JavaScript"
+          cp *.css www/ 2>/dev/null || echo "⚠️ لا توجد ملفات CSS"
+          cp *.json www/ 2>/dev/null || echo "⚠️ لا توجد ملفات JSON"
+          cp *.svg www/ 2>/dev/null || echo "⚠️ لا توجد ملفات SVG"
+          cp *.png www/ 2>/dev/null || echo "⚠️ لا توجد ملفات PNG"
+          cp *.jpg www/ 2>/dev/null || echo "⚠️ لا توجد ملفات JPG"
+          cp *.jpeg www/ 2>/dev/null || echo "⚠️ لا توجد ملفات JPEG"
+          cp *.webp www/ 2>/dev/null || echo "⚠️ لا توجد ملفات WebP"
+          
+          # عرض محتويات www للتأكيد
+          echo "📂 محتويات مجلد www:"
+          ls -la www/
 
-      - name: 📄 Create package.json
+      - name: 📄 إنشاء package.json
         run: |
           cat > package.json << EOF
           {
             "name": "${{ github.event.inputs.app_name }}-app",
-            "version": "1.0.0",
-            "description": "${{ github.event.inputs.app_name }} - App",
+            "version": "${{ github.event.inputs.app_version }}",
+            "description": "${{ github.event.inputs.app_name }} - تطبيق Android",
             "main": "www/index.html",
+            "scripts": {
+              "build": "echo 'Build complete'"
+            },
             "dependencies": {
               "@capacitor/android": "^6.0.0",
               "@capacitor/core": "^6.0.0",
@@ -81,30 +102,41 @@ jobs:
           }
           EOF
 
-      - name: ⚙️ Create capacitor.config.json
+      - name: ⚙️ إنشاء إعدادات Capacitor
         run: |
           cat > capacitor.config.json << EOF
           {
             "appId": "${{ github.event.inputs.app_id }}",
             "appName": "${{ github.event.inputs.app_name }}",
             "webDir": "www",
-            "server": { "androidScheme": "https" },
-            "android": { "allowMixedContent": true }
+            "server": {
+              "androidScheme": "https"
+            },
+            "android": {
+              "allowMixedContent": true,
+              "captureInput": true,
+              "webContentsDebuggingEnabled": true
+            }
           }
           EOF
 
-      - name: 📦 Install Dependencies
+      - name: 📦 تثبيت الاعتماديات
         run: npm install
 
-      - name: 🤖 Add Android Platform
+      - name: 🤖 إضافة منصة Android
         run: npx cap add android
 
-      - name: 🎨 Generate App Icons
+      - name: 🎨 معالجة الأيقونات وإنشاء APK كامل
         run: |
           ICON_PATH="${{ github.event.inputs.icon_path }}"
           BG_COLOR="${{ github.event.inputs.icon_bg }}"
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          VERSION_CODE="${{ github.event.inputs.app_version_code }}"
+          VERSION_NAME="${{ github.event.inputs.app_version }}"
           
-          # إنشاء جميع المجلدات
+          echo "🖼️ بدء معالجة الأيقونات..."
+          
+          # إنشاء جميع المجلدات المطلوبة
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
           mkdir -p android/app/src/main/res/mipmap-mdpi
@@ -114,14 +146,20 @@ jobs:
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android/app/src/main/res/values
           
+          # التحقق من وجود الصورة
           if [ -f "$ICON_PATH" ]; then
             echo "✅ تم العثور على الصورة: $ICON_PATH"
             
-            # 1️⃣ الأيقونة التكيفية (foreground) - 432x432
+            # قراءة أبعاد الصورة الأصلية
+            dimensions=$(identify -format "%wx%h" "$ICON_PATH")
+            echo "📏 أبعاد الصورة: $dimensions"
+            
+            # 1️⃣ الأيقونة التكيفية (foreground) - 432x432 مع شفافية
             convert "$ICON_PATH" \
               -resize 432x432^ \
               -gravity center \
               -extent 432x432 \
+              -alpha set \
               android/app/src/main/res/drawable/ic_launcher_foreground.png
             echo "✅ تم إنشاء foreground (432x432)"
             
@@ -141,19 +179,21 @@ jobs:
             # 3️⃣ نسخة للـ drawable
             cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png \
               android/app/src/main/res/drawable/ic_launcher.png
-              
+            
+            # 4️⃣ أيقونة إضافية للاستخدامات العامة
+            convert "$ICON_PATH" -resize 512x512 \
+              android/app/src/main/res/drawable/app_icon.png
+            echo "✅ تم إنشاء أيقونة إضافية (512x512)"
+            
           else
             echo "❌ الصورة غير موجودة: $ICON_PATH"
             echo ""
-            echo "🔍 الملفات الموجودة في الجذر:"
-            ls -la *.png *.jpg *.jpeg *.webp 2>/dev/null || echo "لا توجد صور"
-            echo ""
-            echo "🔍 محتويات مجلد icons:"
-            ls -la icons/ 2>/dev/null || echo "مجلد icons غير موجود"
+            echo "🔍 البحث عن الصور المتاحة:"
+            find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) 2>/dev/null
             exit 1
           fi
           
-          # 4️⃣ خلفية الأيقونة التكيفية
+          # 5️⃣ إنشاء ملف الخلفية التكيفية
           cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -166,8 +206,9 @@ jobs:
                   android:pathData="M0,0h108v108h-108z"/>
           </vector>
           EOF
+          echo "✅ تم إنشاء خلفية الأيقونة التكيفية"
           
-          # 5️⃣ الأيقونة التكيفية (Android 8+)
+          # 6️⃣ إنشاء الأيقونة التكيفية (Android 8+)
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -176,7 +217,16 @@ jobs:
           </adaptive-icon>
           EOF
           
-          # 6️⃣ قيم الألوان
+          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_launcher_background"/>
+              <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+          </adaptive-icon>
+          EOF
+          echo "✅ تم إنشاء الأيقونات التكيفية"
+          
+          # 7️⃣ إنشاء قيم الألوان
           cat > android/app/src/main/res/values/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
@@ -187,12 +237,13 @@ jobs:
           echo ""
           echo "🎉 تم تجهيز جميع الأيقونات بنجاح!"
           echo "📱 الأيقونات التكيفية: ✅"
-          echo "📱 الأيقونات الاحتياطية: ✅"
+          echo "📱 أيقونات mipmap: ✅"
+          echo "📱 أيقونة إضافية: ✅"
           echo "🎨 لون الخلفية: ${BG_COLOR}"
 
-      - name: 🎨 Customize App Name
+      - name: 🎨 تخصيص اسم التطبيق والإعدادات
         run: |
-          mkdir -p android/app/src/main/res/values
+          # إنشاء ملف strings.xml
           cat > android/app/src/main/res/values/strings.xml << EOF
           <?xml version='1.0' encoding='utf-8'?>
           <resources>
@@ -200,18 +251,72 @@ jobs:
               <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
           </resources>
           EOF
+          
+          # تحديث ملف build.gradle
+          cat > android/app/build.gradle << 'BUILDGRADLE'
+          apply plugin: 'com.android.application'
+          
+          android {
+              namespace "${{ github.event.inputs.app_id }}"
+              compileSdkVersion 34
+              
+              defaultConfig {
+                  applicationId "${{ github.event.inputs.app_id }}"
+                  minSdkVersion 22
+                  targetSdkVersion 34
+                  versionCode ${{ github.event.inputs.app_version_code }}
+                  versionName "${{ github.event.inputs.app_version }}"
+                  testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+              }
+              
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+              
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+              implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+              testImplementation 'junit:junit:4.13.2'
+              androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+              androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+          }
+          BUILDGRADLE
+          
+          echo "✅ تم تخصيص إعدادات التطبيق"
 
-      - name: 🔄 Sync Capacitor
+      - name: 🔄 مزامنة Capacitor
         run: npx cap sync android
 
-      - name: 🔨 Build APK
+      - name: 🔨 بناء APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: 📤 Upload APK
+      - name: 📤 رفع ملف APK
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.inputs.app_name }}-APK
+          name: ${{ github.event.inputs.app_name }}-v${{ github.event.inputs.app_version }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 90
+
+      - name: 📊 عرض معلومات البناء
+        run: |
+          echo "🎉 اكتمل البناء بنجاح!"
+          echo "📱 اسم التطبيق: ${{ github.event.inputs.app_name }}"
+          echo "🆔 App ID: ${{ github.event.inputs.app_id }}"
+          echo "📌 الإصدار: ${{ github.event.inputs.app_version }}"
+          echo "🔢 رمز الإصدار: ${{ github.event.inputs.app_version_code }}"
+          echo "🖼️ الأيقونة: ${{ github.event.inputs.icon_path }}"
+          echo "🎨 لون الخلفية: ${{ github.event.inputs.icon_bg }}"
+          echo "📦 حجم الملف: $(du -h android/app/build/outputs/apk/debug/app-debug.apk | cut -f1)"
