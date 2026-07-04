@@ -1,89 +1,173 @@
-- name: 🎨 Set App Icon
-  id: icon
-  run: |
-    mkdir -p android/app/src/main/res/drawable
-    mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-    mkdir -p android/app/src/main/res/values
-    mkdir -p android/app/src/main/res/mipmap-hdpi
-    mkdir -p android/app/src/main/res/mipmap-mdpi
-    mkdir -p android/app/src/main/res/mipmap-xhdpi
-    mkdir -p android/app/src/main/res/mipmap-xxhdpi
-    mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+name: 🃏 Build APK - Joker (Any Project)
 
-    APP_NAME="${{ github.event.inputs.app_name }}"
-    APP_COLOR="${{ github.event.inputs.app_color }}"
-    APP_LETTER="${{ github.event.inputs.app_letter }}"
-    ICON_PATH="${{ github.event.inputs.icon_path }}"
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: '📱 اسم التطبيق'
+        required: true
+        default: 'MyApp'
+        type: string
+      app_id:
+        description: '🆔 App ID (مثال: com.example.myapp)'
+        required: true
+        default: 'com.example.myapp'
+        type: string
+      icon_path:
+        description: '🖼️ مسار الأيقونة مع الاسم (مثال: icons/myicon.png)'
+        required: true
+        default: 'icons/icon.png'
+        type: string
+      app_color:
+        description: '🎨 لون الأيقونة الاحتياطي (عند عدم وجود الصورة)'
+        required: false
+        default: '#2196F3'
+        type: string
+      app_letter:
+        description: '🔤 حرف الأيقونة الاحتياطي (عند عدم وجود الصورة)'
+        required: false
+        default: 'A'
+        type: string
 
-    # تثبيت ImageMagick
-    sudo apt-get update -qq && sudo apt-get install -y imagemagick
+permissions:
+  contents: write
 
-    if [ -f "$ICON_PATH" ]; then
-      echo "✅ تم العثور على الأيقونة: $ICON_PATH"
-      
-      # تحويل الصورة للأحجام المطلوبة للأيقونات التكيفية
-      convert "$ICON_PATH" -resize 1024x1024 -gravity center -extent 1024x1024 \
-        android/app/src/main/res/drawable/ic_launcher_foreground.png
-      
-      # إنشاء الأيقونات بأحجام مختلفة للـ mipmap
-      convert "$ICON_PATH" -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-      convert "$ICON_PATH" -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-      convert "$ICON_PATH" -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-      convert "$ICON_PATH" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-      convert "$ICON_PATH" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-      
-      echo "✅ تم تحويل الأيقونة لجميع الأحجام"
-      
-    else
-      echo "⚠️ الأيقونة $ICON_PATH غير موجودة، جاري توليد أيقونة افتراضية..."
-      
-      # توليد أيقونة بالحرف واللون
-      convert -size 1024x1024 xc:"$APP_COLOR" -gravity center -fill white \
-        -font Helvetica -pointsize 500 -annotate 0 "$APP_LETTER" \
-        android/app/src/main/res/drawable/ic_launcher_foreground.png
-      
-      # توليد بأحجام مختلفة
-      convert -size 48x48 xc:"$APP_COLOR" -gravity center -fill white \
-        -font Helvetica -pointsize 25 -annotate 0 "$APP_LETTER" \
-        android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-      convert -size 72x72 xc:"$APP_COLOR" -gravity center -fill white \
-        -font Helvetica -pointsize 35 -annotate 0 "$APP_LETTER" \
-        android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-      convert -size 96x96 xc:"$APP_COLOR" -gravity center -fill white \
-        -font Helvetica -pointsize 45 -annotate 0 "$APP_LETTER" \
-        android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-      convert -size 144x144 xc:"$APP_COLOR" -gravity center -fill white \
-        -font Helvetica -pointsize 70 -annotate 0 "$APP_LETTER" \
-        android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-      convert -size 192x192 xc:"$APP_COLOR" -gravity center -fill white \
-        -font Helvetica -pointsize 95 -annotate 0 "$APP_LETTER" \
-        android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-      
-      echo "✅ تم توليد أيقونة بالحرف $APP_LETTER ولون $APP_COLOR"
-    fi
+jobs:
+  build-apk:
+    name: 📱 Build ${{ github.event.inputs.app_name }} APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
 
-    # إنشاء الخلفية البيضاء للأيقونة التكيفية
-    cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
-    <?xml version="1.0" encoding="utf-8"?>
-    <shape xmlns:android="http://schemas.android.com/apk/res/android">
-        <solid android:color="#FFFFFF"/>
-    </shape>
-    EOF
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    # ملف الأيقونة التكيفية
-    cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
-    <?xml version="1.0" encoding="utf-8"?>
-    <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-        <background android:drawable="@drawable/ic_launcher_background"/>
-        <foreground android:drawable="@drawable/ic_launcher_foreground"/>
-    </adaptive-icon>
-    EOF
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    cat > android/app/src/main/res/values/ic_launcher_background.xml << EOF
-    <?xml version="1.0" encoding="utf-8"?>
-    <resources>
-        <color name="ic_launcher_background">#FFFFFF</color>
-    </resources>
-    EOF
+      - name: 📦 Install Capacitor
+        run: npm install -g @capacitor/cli @capacitor/core @capacitor/android
 
-    echo "✅ أيقونة $APP_NAME جاهزة بجميع الأحجام!"
+      - name: 📁 Create www folder
+        run: |
+          mkdir -p www
+          cp *.html www/ 2>/dev/null || true
+          cp *.js www/ 2>/dev/null || true
+          cp *.json www/ 2>/dev/null || true
+          cp *.svg www/ 2>/dev/null || true
+          cp *.png www/ 2>/dev/null || true
+
+      - name: 📄 Create package.json
+        run: |
+          cat > package.json << EOF
+          {
+            "name": "${{ github.event.inputs.app_name }}-app",
+            "version": "1.0.0",
+            "description": "${{ github.event.inputs.app_name }} - App",
+            "main": "www/index.html",
+            "dependencies": {
+              "@capacitor/android": "^6.0.0",
+              "@capacitor/core": "^6.0.0",
+              "@capacitor/cli": "^6.0.0"
+            }
+          }
+          EOF
+
+      - name: ⚙️ Create capacitor.config.json
+        run: |
+          cat > capacitor.config.json << EOF
+          {
+            "appId": "${{ github.event.inputs.app_id }}",
+            "appName": "${{ github.event.inputs.app_name }}",
+            "webDir": "www",
+            "server": { "androidScheme": "https" },
+            "android": { "allowMixedContent": true }
+          }
+          EOF
+
+      - name: 📦 Install Dependencies
+        run: npm install
+
+      - name: 🤖 Add Android Platform
+        run: npx cap add android
+
+      - name: 🎨 Set App Icon
+        id: icon
+        run: |
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android/app/src/main/res/values
+
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          APP_COLOR="${{ github.event.inputs.app_color }}"
+          APP_LETTER="${{ github.event.inputs.app_letter }}"
+          ICON_PATH="${{ github.event.inputs.icon_path }}"
+
+          if [ -f "$ICON_PATH" ]; then
+            cp "$ICON_PATH" android/app/src/main/res/drawable/ic_launcher_foreground.png
+            echo "✅ تم استخدام الأيقونة من: $ICON_PATH"
+          else
+            echo "⚠️ الأيقونة $ICON_PATH غير موجودة، جاري توليد أيقونة افتراضية..."
+            sudo apt-get update -qq && sudo apt-get install -y imagemagick
+            convert -size 1024x1024 xc:"$APP_COLOR" -gravity center -fill white \
+              -font Helvetica -pointsize 500 -annotate 0 "$APP_LETTER" \
+              android/app/src/main/res/drawable/ic_launcher_foreground.png
+            echo "✅ تم توليد أيقونة بالحرف $APP_LETTER ولون $APP_COLOR"
+          fi
+
+          cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
+              <solid android:color="#FFFFFF"/>
+          </shape>
+          EOF
+
+          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_launcher_background"/>
+              <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+          </adaptive-icon>
+          EOF
+
+          cat > android/app/src/main/res/values/ic_launcher_background.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_launcher_background">#FFFFFF</color>
+          </resources>
+          EOF
+
+          echo "✅ أيقونة $APP_NAME جاهزة!"
+
+      - name: 🎨 Customize Android Strings
+        run: |
+          mkdir -p android/app/src/main/res/values
+          cat > android/app/src/main/res/values/strings.xml << EOF
+          <?xml version='1.0' encoding='utf-8'?>
+          <resources>
+              <string name="app_name">${{ github.event.inputs.app_name }}</string>
+              <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
+          </resources>
+          EOF
+
+      - name: 🔄 Sync Assets
+        run: npx cap sync android
+
+      - name: 🔨 Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: 📤 Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
