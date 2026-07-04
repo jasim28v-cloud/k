@@ -64,9 +64,15 @@ jobs:
         run: |
           echo "🔍 جاري سحب جميع ملفات المشروع..."
           
+          # عرض جميع الملفات الموجودة
+          echo "📋 جميع الملفات في المشروع:"
+          find . -type f -not -path './.git/*' -not -path './node_modules/*' | sort
+          
+          # إنشاء مجلد www
           rm -rf www
           mkdir -p www
           
+          # تحديد مجلد المصدر
           SOURCE_DIR="${{ github.event.inputs.site_folder }}"
           if [ -z "$SOURCE_DIR" ]; then
             SOURCE_DIR="."
@@ -74,7 +80,9 @@ jobs:
           
           echo "📁 جاري نسخ الملفات من: $SOURCE_DIR"
           
+          # نسخ جميع الملفات والمجلدات
           if [ "$SOURCE_DIR" = "." ]; then
+            # نسخ كل شيء ما عدا المجلدات المستثناة
             shopt -s dotglob
             for item in "$SOURCE_DIR"/*; do
               basename=$(basename "$item")
@@ -84,113 +92,28 @@ jobs:
               fi
             done
           else
+            # نسخ من مجلد محدد
             cp -r "$SOURCE_DIR"/* www/ 2>/dev/null || true
             cp -r "$SOURCE_DIR"/.* www/ 2>/dev/null || true
           fi
           
+          # حذف أي ملفات غير مرغوب فيها داخل www
           rm -rf www/.git www/.github www/node_modules www/.gitignore 2>/dev/null || true
           rm -rf www/package.json www/package-lock.json 2>/dev/null || true
           rm -rf www/android www/ios www/capacitor.config.json 2>/dev/null || true
           rm -rf www/icon.png www/icon.jpg www/icon.jpeg 2>/dev/null || true
           
+          echo ""
           echo "✅ تم نسخ جميع ملفات الموقع"
-
-      - name: 🔧 إصلاح مشكلة الخطوط الحمراء في WebView
-        run: |
-          # إنشاء ملف CSS لإخفاء الخطوط الحمراء
-          cat > www/disable-scrollbar.css << 'EOF'
-          /* إخفاء شريط التمرير والحدود الحمراء */
-          * {
-              -webkit-tap-highlight-color: transparent !important;
-              outline: none !important;
-              scrollbar-width: none !important;
-              -ms-overflow-style: none !important;
-          }
-          
-          *::-webkit-scrollbar {
-              display: none !important;
-              width: 0 !important;
-              height: 0 !important;
-              background: transparent !important;
-          }
-          
-          html, body {
-              overscroll-behavior: none !important;
-              -webkit-overflow-scrolling: touch !important;
-              scrollbar-width: none !important;
-              -ms-overflow-style: none !important;
-          }
-          
-          html::-webkit-scrollbar,
-          body::-webkit-scrollbar {
-              display: none !important;
-              width: 0 !important;
-              height: 0 !important;
-          }
-          
-          /* إخفاء أي حدود حمراء أو مؤشرات */
-          :focus {
-              outline: none !important;
-              box-shadow: none !important;
-              border-color: transparent !important;
-          }
-          
-          /* إخفاء تأثير الضغط على العناصر */
-          a, button, input, textarea, select, div, span, p, h1, h2, h3, h4, h5, h6 {
-              -webkit-tap-highlight-color: transparent !important;
-              -webkit-user-select: none !important;
-              user-select: none !important;
-          }
-          EOF
-          
-          # إضافة ملف CSS لجميع صفحات HTML
-          find www -name "*.html" -o -name "*.htm" | while read html_file; do
-            # التحقق إذا كان الملف يحتوي على </head>
-            if grep -q "</head>" "$html_file"; then
-              # إضافة رابط CSS قبل </head>
-              sed -i 's|</head>|    <link rel="stylesheet" href="disable-scrollbar.css">\n</head>|' "$html_file"
-              echo "  ✅ تم إصلاح: $html_file"
-            fi
+          echo "📊 إحصائيات مجلد www:"
+          echo "  📁 عدد الملفات: $(find www -type f | wc -l)"
+          echo "  📂 عدد المجلدات: $(find www -type d | wc -l)"
+          echo "  💾 الحجم الإجمالي: $(du -sh www | cut -f1)"
+          echo ""
+          echo "📋 محتويات مجلد www:"
+          find www -type f -not -path '*/\.*' | sort | while read file; do
+            echo "  📄 ${file#www/} ($(du -h "$file" | cut -f1))"
           done
-          
-          # إنشاء ملف HTML مع الإصلاحات إذا لم يوجد
-          if [ ! -f "www/index.html" ] && [ ! -f "www/index.htm" ]; then
-            cat > www/index.html << EOF
-          <!DOCTYPE html>
-          <html dir="rtl">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-              <title>${{ github.event.inputs.app_name }}</title>
-              <link rel="stylesheet" href="disable-scrollbar.css">
-              <style>
-                  * {
-                      margin: 0;
-                      padding: 0;
-                      box-sizing: border-box;
-                      -webkit-tap-highlight-color: transparent;
-                      outline: none;
-                  }
-                  body {
-                      font-family: Arial, sans-serif;
-                      background: ${{ github.event.inputs.app_color }};
-                      color: white;
-                      min-height: 100vh;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      text-align: center;
-                      overflow: hidden;
-                  }
-                  h1 { font-size: 3em; }
-              </style>
-          </head>
-          <body>
-              <h1>📱 ${{ github.event.inputs.app_name }}</h1>
-          </body>
-          </html>
-          EOF
-          fi
 
       - name: 📄 إنشاء package.json
         run: |
@@ -224,14 +147,16 @@ jobs:
             "webDir": "www",
             "bundledWebRuntime": false,
             "server": {
-              "androidScheme": "https",
+              "androidScheme": "http",
               "allowNavigation": ["*"],
-              "cleartext": true
+              "cleartext": true,
+              "hostname": "localhost"
             },
             "android": {
               "allowMixedContent": true,
               "captureInput": true,
-              "webContentsDebuggingEnabled": false
+              "webContentsDebuggingEnabled": true,
+              "overrideUserAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36"
             },
             "plugins": {
               "SplashScreen": {
@@ -248,21 +173,43 @@ jobs:
       - name: 🤖 إنشاء مشروع Android
         run: npx cap add android
 
+      - name: 🔒 إعداد أمان الشبكة
+        run: |
+          mkdir -p android/app/src/main/res/xml
+          cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+              <base-config cleartextTrafficPermitted="true">
+                  <trust-anchors>
+                      <certificates src="system" />
+                  </trust-anchors>
+              </base-config>
+          </network-security-config>
+          EOF
+          echo "✅ تم إعداد أمان الشبكة"
+
       - name: 🎨 إنشاء الأيقونات بجميع المقاسات
         run: |
           ICON_FILE="${{ github.event.inputs.icon_file }}"
           
+          # التحقق من وجود ملف الأيقونة
           if [ ! -f "$ICON_FILE" ]; then
             echo "❌ خطأ: ملف الأيقونة $ICON_FILE غير موجود!"
+            echo "📁 البحث عن ملفات PNG في المشروع:"
+            find . -name "*.png" -not -path './node_modules/*' -not -path './.git/*'
             exit 1
           fi
           
           echo "✅ تم العثور على ملف الأيقونة: $ICON_FILE"
+          echo "📏 حجم الصورة الأصلي: $(identify -format '%wx%h' $ICON_FILE)"
+          echo ""
           
+          # حذف الأيقونات القديمة
           rm -rf android/app/src/main/res/mipmap-*
           rm -rf android/app/src/main/res/drawable/ic_launcher_*
           rm -rf android/app/src/main/res/drawable-*
           
+          # إنشاء جميع مجلدات المقاسات
           mkdir -p android/app/src/main/res/mipmap-ldpi
           mkdir -p android/app/src/main/res/mipmap-mdpi
           mkdir -p android/app/src/main/res/mipmap-hdpi
@@ -271,20 +218,51 @@ jobs:
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
           mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/drawable-ldpi
+          mkdir -p android/app/src/main/res/drawable-mdpi
+          mkdir -p android/app/src/main/res/drawable-hdpi
+          mkdir -p android/app/src/main/res/drawable-xhdpi
+          mkdir -p android/app/src/main/res/drawable-xxhdpi
+          mkdir -p android/app/src/main/res/drawable-xxxhdpi
           
-          convert $ICON_FILE -resize 36x36   android/app/src/main/res/mipmap-ldpi/ic_launcher.png
-          convert $ICON_FILE -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert $ICON_FILE -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert $ICON_FILE -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert $ICON_FILE -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert $ICON_FILE -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          echo "🎨 جاري إنشاء الأيقونات بجميع المقاسات..."
+          echo ""
           
-          cp $ICON_FILE android/app/src/main/res/drawable/ic_launcher_foreground.png
+          # إنشاء الأيقونات بجميع المقاسات للـ mipmap
+          echo "📱 أيقونات mipmap (للتطبيق):"
+          convert $ICON_FILE -resize 36x36   android/app/src/main/res/mipmap-ldpi/ic_launcher.png   && echo "  ✅ ldpi:    36x36"
+          convert $ICON_FILE -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png   && echo "  ✅ mdpi:    48x48"
+          convert $ICON_FILE -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png   && echo "  ✅ hdpi:    72x72"
+          convert $ICON_FILE -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png  && echo "  ✅ xhdpi:   96x96"
+          convert $ICON_FILE -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png && echo "  ✅ xxhdpi: 144x144"
+          convert $ICON_FILE -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png && echo "  ✅ xxxhdpi:192x192"
           
-          echo "✅ تم إنشاء جميع الأيقونات"
+          echo ""
+          echo "🔧 أيقونات drawable (للإشعارات والأماكن الأخرى):"
+          convert $ICON_FILE -resize 18x18   android/app/src/main/res/drawable-ldpi/ic_launcher.png   && echo "  ✅ ldpi:    18x18"
+          convert $ICON_FILE -resize 24x24   android/app/src/main/res/drawable-mdpi/ic_launcher.png   && echo "  ✅ mdpi:    24x24"
+          convert $ICON_FILE -resize 36x36   android/app/src/main/res/drawable-hdpi/ic_launcher.png   && echo "  ✅ hdpi:    36x36"
+          convert $ICON_FILE -resize 48x48   android/app/src/main/res/drawable-xhdpi/ic_launcher.png  && echo "  ✅ xhdpi:   48x48"
+          convert $ICON_FILE -resize 72x72   android/app/src/main/res/drawable-xxhdpi/ic_launcher.png && echo "  ✅ xxhdpi:  72x72"
+          convert $ICON_FILE -resize 96x96   android/app/src/main/res/drawable-xxxhdpi/ic_launcher.png && echo "  ✅ xxxhdpi: 96x96"
+          
+          echo ""
+          echo "🎯 أيقونات إضافية:"
+          # نسخ الصورة الأصلية للـ foreground
+          cp $ICON_FILE android/app/src/main/res/drawable/ic_launcher_foreground.png && echo "  ✅ Foreground"
+          
+          # إنشاء أيقونة مربعة للإشعارات
+          convert $ICON_FILE -resize 72x72 -background none -gravity center -extent 72x72 android/app/src/main/res/drawable/ic_launcher_square.png && echo "  ✅ Square icon"
+          
+          # إنشاء أيقونة دائرية
+          convert $ICON_FILE -resize 72x72 \( +clone -threshold -1 -draw 'circle 36,36 36,0' \) -alpha off -compose CopyOpacity -composite android/app/src/main/res/drawable/ic_launcher_round.png && echo "  ✅ Round icon"
+          
+          echo ""
+          echo "✅ تم إنشاء جميع الأيقونات بنجاح!"
 
-      - name: 🎨 إنشاء الأيقونة التكيفية
+      - name: 🎨 إنشاء الأيقونة التكيفية (لأندرويد 8+)
         run: |
+          # إنشاء خلفية الأيقونة
           cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -292,6 +270,7 @@ jobs:
           </shape>
           EOF
           
+          # إنشاء ملف الأيقونة التكيفية الرئيسية
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -300,6 +279,7 @@ jobs:
           </adaptive-icon>
           EOF
           
+          # إنشاء الأيقونة الدائرية التكيفية
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -307,17 +287,23 @@ jobs:
               <foreground android:drawable="@drawable/ic_launcher_foreground"/>
           </adaptive-icon>
           EOF
+          
+          echo "✅ تم إنشاء الأيقونة التكيفية لأندرويد 8+"
 
-      - name: 🎨 تخصيص تطبيق Android وإخفاء التمرير
+      - name: 🎨 تخصيص تطبيق Android
         run: |
+          # تخصيص اسم التطبيق
+          mkdir -p android/app/src/main/res/values
           cat > android/app/src/main/res/values/strings.xml << EOF
           <?xml version='1.0' encoding='utf-8'?>
           <resources>
               <string name="app_name">${{ github.event.inputs.app_name }}</string>
               <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
+              <string name="package_name">${{ github.event.inputs.app_id }}</string>
           </resources>
           EOF
           
+          # إنشاء ملف themes
           cat > android/app/src/main/res/values/styles.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
@@ -325,46 +311,31 @@ jobs:
                   <item name="colorPrimary">${{ github.event.inputs.app_color }}</item>
                   <item name="colorPrimaryDark">${{ github.event.inputs.app_color }}</item>
                   <item name="colorAccent">${{ github.event.inputs.app_color }}</item>
-                  <item name="android:scrollbarThumbVertical">@android:color/transparent</item>
-                  <item name="android:scrollbarSize">0dp</item>
+              </style>
+              
+              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+                  <item name="android:background">${{ github.event.inputs.app_color }}</item>
               </style>
           </resources>
           EOF
+          
+          echo "✅ تم تخصيص مظهر التطبيق"
 
       - name: 🔧 إعداد أذونات Android
         run: |
           MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
           
           if [ -f "$MANIFEST_FILE" ]; then
-            sed -i 's|</manifest>|    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n</manifest>|' $MANIFEST_FILE
-            sed -i 's|android:usesCleartextTraffic="false"|android:usesCleartextTraffic="true"|' $MANIFEST_FILE
-          fi
-
-      - name: 🔧 تعديل WebView لإخفاء الخطوط الحمراء
-        run: |
-          # البحث عن ملف MainActivity
-          MAIN_ACTIVITY=$(find android -name "MainActivity.java" -type f)
-          
-          if [ -f "$MAIN_ACTIVITY" ]; then
-            # إضافة إعدادات WebView لإخفاء التمرير والحدود
-            sed -i '/import android.os.Bundle;/a\
-          import android.webkit.WebView;\
-          import android.webkit.WebSettings;' "$MAIN_ACTIVITY"
+            # إضافة الأذونات المطلوبة
+            sed -i 's|</manifest>|    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>\n</manifest>|' $MANIFEST_FILE
             
-            sed -i '/super.onCreate(savedInstanceState);/a\
-          \
-          // إعدادات WebView لإخفاء الخطوط الحمراء والتمرير\
-          WebView webView = new WebView(this);\
-          webView.setVerticalScrollBarEnabled(false);\
-          webView.setHorizontalScrollBarEnabled(false);\
-          webView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);\
-          webView.setOverScrollMode(View.OVER_SCROLL_NEVER);' "$MAIN_ACTIVITY"
+            # السماح بـ HTTP وإضافة إعدادات الأمان
+            sed -i 's|<application|<application android:usesCleartextTraffic="true" android:networkSecurityConfig="@xml/network_security_config" android:hardwareAccelerated="true"|' $MANIFEST_FILE
             
-            # إضافة import View
-            sed -i '/import android.os.Bundle;/a\
-          import android.view.View;' "$MAIN_ACTIVITY"
+            # إضافة دعم الشاشات المختلفة
+            sed -i 's|<application|<supports-screens android:smallScreens="true" android:normalScreens="true" android:largeScreens="true" android:xlargeScreens="true" android:anyDensity="true"/>\n    <application|' $MANIFEST_FILE
             
-            echo "✅ تم تعديل MainActivity"
+            echo "✅ تم تحديث الأذونات والإعدادات"
           fi
 
       - name: 🔄 مزامنة المشروع
@@ -376,6 +347,24 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
+      - name: 📊 معلومات الملف الناتج
+        run: |
+          APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ -f "$APK_PATH" ]; then
+            echo "✅ تم بناء APK بنجاح"
+            echo "📱 حجم الملف: $(du -h $APK_PATH | cut -f1)"
+            echo "📋 اسم التطبيق: ${{ github.event.inputs.app_name }}"
+            echo "🆔 App ID: ${{ github.event.inputs.app_id }}"
+            echo ""
+            echo "📊 إحصائيات الأيقونات المضمنة:"
+            find android/app/src/main/res -name "ic_launcher*" -type f | while read icon; do
+              echo "  🎨 ${icon#android/app/src/main/res/} ($(du -h "$icon" | cut -f1))"
+            done
+          else
+            echo "❌ فشل بناء APK"
+            exit 1
+          fi
+
       - name: 📤 رفع ملف APK
         uses: actions/upload-artifact@v4
         with:
@@ -386,5 +375,11 @@ jobs:
       - name: 🎉 اكتمال البناء
         run: |
           echo "🎊 تم بناء تطبيق ${{ github.event.inputs.app_name }} بنجاح!"
-          echo "✅ تم إصلاح مشكلة الخطوط الحمراء"
           echo "📱 يمكنك تحميل الـ APK من قسم Artifacts"
+          echo ""
+          echo "📋 ملخص الأيقونات التي تم إنشاؤها:"
+          echo "  📱 أيقونات التطبيق: 6 مقاسات (ldpi → xxxhdpi)"
+          echo "  🔔 أيقونات الإشعارات: 6 مقاسات (ldpi → xxxhdpi)"
+          echo "  🎯 أيقونة تكيفية: لأندرويد 8+"
+          echo "  ⭕ أيقونة دائرية: للشاشات المستديرة"
+          echo "  ⬜ أيقونة مربعة: للإشعارات"
