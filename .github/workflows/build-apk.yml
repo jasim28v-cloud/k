@@ -1,26 +1,48 @@
-name: 🃏 Build APK - Joker Custom
+name: 🃏 Build APK - Joker (All Sites)
 
 on:
   workflow_dispatch:
     inputs:
       app_name:
-        description: '✏️ اسم التطبيق (اكتبه بنفسك)'
+        description: '📱 اسم التطبيق'
         required: true
-        type: string
+        default: 'FLARE'
+        type: choice
+        options:
+          - 'LEGACY'
+          - 'VIOLET'
+          - 'GREEN'
+          - 'FLARE'
       app_id:
-        description: '🆔 App ID (مثال: com.myapp.name)'
+        description: '🆔 App ID'
         required: true
-        type: string
+        default: 'com.flare.orange'
+        type: choice
+        options:
+          - 'com.legacy.gold'
+          - 'com.violet.purple'
+          - 'com.green.emerald'
+          - 'com.flare.orange'
       app_color:
-        description: '🎨 لون خلفية الأيقونة (مثال: #ea580c)'
+        description: '🎨 لون الأيقونة'
         required: true
         default: '#ea580c'
-        type: string
+        type: choice
+        options:
+          - '#d4a843'
+          - '#7c3aed'
+          - '#059669'
+          - '#ea580c'
       app_letter:
-        description: '🔤 حرف في وسط الأيقونة'
+        description: '🔤 حرف الأيقونة'
         required: true
         default: 'F'
-        type: string
+        type: choice
+        options:
+          - 'L'
+          - 'V'
+          - 'G'
+          - 'F'
 
 permissions:
   contents: write
@@ -45,10 +67,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 📦 Install Capacitor + ImageMagick
-        run: |
-          npm install -g @capacitor/cli @capacitor/core @capacitor/android
-          sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+      - name: 📦 Install Capacitor
+        run: npm install -g @capacitor/cli @capacitor/core @capacitor/android
 
       - name: 📁 Create www folder
         run: |
@@ -93,38 +113,25 @@ jobs:
       - name: 🤖 Add Android Platform
         run: npx cap add android
 
-      - name: 🎨 أيقونة - لون + حرف + PNG
+      - name: 🎨 Generate Custom Icon
         run: |
-          # حذف الأيقونات القديمة
-          rm -rf android/app/src/main/res/mipmap-*
-          
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           
-          C="${{ github.event.inputs.app_color }}"
-          L="${{ github.event.inputs.app_letter }}"
-          
-          # 🎨 لون الخلفية
           cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="${C}"/>
+              <solid android:color="${{ github.event.inputs.app_color }}"/>
           </shape>
           EOF
           
-          # 🔤 حرف في المنتصف
           cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="108dp"
               android:height="108dp">
               <text
-                  android:text="${L}"
+                  android:text="${{ github.event.inputs.app_letter }}"
                   android:textSize="65dp"
                   android:textColor="#FFFFFF"
                   android:fontFamily="sans-serif-black"
@@ -134,7 +141,6 @@ jobs:
           </vector>
           EOF
           
-          # ربط الطبقتين
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -143,16 +149,9 @@ jobs:
           </adaptive-icon>
           EOF
           
-          # 🖼️ PNG احتياطي لكل الأحجام (يمنع ظهور شعار أندرويد)
-          convert -size 48x48 xc:"${C}" -gravity center -pointsize 28 -fill white -font DejaVu-Sans-Bold -annotate 0 "${L}" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert -size 72x72 xc:"${C}" -gravity center -pointsize 40 -fill white -font DejaVu-Sans-Bold -annotate 0 "${L}" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert -size 96x96 xc:"${C}" -gravity center -pointsize 52 -fill white -font DejaVu-Sans-Bold -annotate 0 "${L}" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert -size 144x144 xc:"${C}" -gravity center -pointsize 76 -fill white -font DejaVu-Sans-Bold -annotate 0 "${L}" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert -size 192x192 xc:"${C}" -gravity center -pointsize 100 -fill white -font DejaVu-Sans-Bold -annotate 0 "${L}" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          
-          echo "✅ أيقونة ${L} على ${C} جاهزة!"
+          echo "✅ ${{ github.event.inputs.app_name }} أيقونة جاهزة!"
 
-      - name: 🎨 اسم التطبيق
+      - name: 🎨 Customize Android Strings
         run: |
           mkdir -p android/app/src/main/res/values
           cat > android/app/src/main/res/values/strings.xml << EOF
