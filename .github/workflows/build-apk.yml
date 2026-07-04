@@ -31,7 +31,7 @@ on:
       splash_duration:
         description: '⏱️ مدة شاشة البداية (بالمللي ثانية)'
         required: false
-        default: '3000'
+        default: '2000'
         type: string
 
 permissions:
@@ -159,7 +159,7 @@ jobs:
           }
           EOF
 
-      - name: ⚙️ إعداد Capacitor مع دعم الكيبورد
+      - name: ⚙️ إعداد Capacitor - صورة واحدة فقط
         run: |
           cat > capacitor.config.json << EOF
           {
@@ -181,15 +181,13 @@ jobs:
             },
             "plugins": {
               "SplashScreen": {
-                "launchShowDuration": ${{ github.event.inputs.splash_duration }},
+                "launchShowDuration": 0,
                 "launchAutoHide": true,
-                "launchFadeOutDuration": 500,
+                "launchFadeOutDuration": 0,
                 "backgroundColor": "${{ github.event.inputs.app_color }}",
                 "androidSplashResourceName": "splash",
                 "androidScaleType": "FIT_CENTER",
-                "showSpinner": true,
-                "spinnerStyle": "large",
-                "spinnerColor": "#FFFFFF",
+                "showSpinner": false,
                 "splashFullScreen": true,
                 "splashImmersive": true
               },
@@ -242,12 +240,6 @@ jobs:
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
           mkdir -p android/app/src/main/res/drawable
-          mkdir -p android/app/src/main/res/drawable-ldpi
-          mkdir -p android/app/src/main/res/drawable-mdpi
-          mkdir -p android/app/src/main/res/drawable-hdpi
-          mkdir -p android/app/src/main/res/drawable-xhdpi
-          mkdir -p android/app/src/main/res/drawable-xxhdpi
-          mkdir -p android/app/src/main/res/drawable-xxxhdpi
           
           echo "🎨 جاري إنشاء الأيقونات بجميع المقاسات..."
           echo ""
@@ -261,24 +253,13 @@ jobs:
           convert $ICON_FILE -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png && echo "  ✅ xxxhdpi:192x192"
           
           echo ""
-          echo "🔧 أيقونات drawable (للإشعارات والأماكن الأخرى):"
-          convert $ICON_FILE -resize 18x18   android/app/src/main/res/drawable-ldpi/ic_launcher.png   && echo "  ✅ ldpi:    18x18"
-          convert $ICON_FILE -resize 24x24   android/app/src/main/res/drawable-mdpi/ic_launcher.png   && echo "  ✅ mdpi:    24x24"
-          convert $ICON_FILE -resize 36x36   android/app/src/main/res/drawable-hdpi/ic_launcher.png   && echo "  ✅ hdpi:    36x36"
-          convert $ICON_FILE -resize 48x48   android/app/src/main/res/drawable-xhdpi/ic_launcher.png  && echo "  ✅ xhdpi:   48x48"
-          convert $ICON_FILE -resize 72x72   android/app/src/main/res/drawable-xxhdpi/ic_launcher.png && echo "  ✅ xxhdpi:  72x72"
-          convert $ICON_FILE -resize 96x96   android/app/src/main/res/drawable-xxxhdpi/ic_launcher.png && echo "  ✅ xxxhdpi: 96x96"
-          
-          echo ""
-          echo "🎯 أيقونات إضافية:"
+          echo "🎯 الأيقونات الإضافية:"
           cp $ICON_FILE android/app/src/main/res/drawable/ic_launcher_foreground.png && echo "  ✅ Foreground"
-          convert $ICON_FILE -resize 72x72 -background none -gravity center -extent 72x72 android/app/src/main/res/drawable/ic_launcher_square.png && echo "  ✅ Square icon"
-          convert $ICON_FILE -resize 72x72 \( +clone -threshold -1 -draw 'circle 36,36 36,0' \) -alpha off -compose CopyOpacity -composite android/app/src/main/res/drawable/ic_launcher_round.png && echo "  ✅ Round icon"
           
           echo ""
           echo "✅ تم إنشاء جميع الأيقونات بنجاح!"
 
-      - name: 🎨 إنشاء Splash Screen سوداء مع Spinner
+      - name: 🎨 إنشاء Splash Screen - صورة واحدة فقط
         run: |
           ICON_FILE="${{ github.event.inputs.icon_file }}"
           APP_COLOR="${{ github.event.inputs.app_color }}"
@@ -288,81 +269,33 @@ jobs:
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/values
           
-          # إنشاء Splash Screen مع أيقونة في المنتصف
-          convert $ICON_FILE -resize 250x250 -background none -gravity center -extent 300x300 \
-                  \( +clone -background "$APP_COLOR" -shadow 0x0+0+0 \) \
-                  +swap -background "$APP_COLOR" -layers merge +repage \
+          # إنشاء صورة Splash واحدة فقط - الأيقونة في المنتصف مع خلفية ملونة
+          convert $ICON_FILE -resize 250x250 -background "$APP_COLOR" -gravity center -extent 300x300 \
                   android/app/src/main/res/drawable/splash.png
           
-          echo "  ✅ تم إنشاء splash.png"
+          echo "  ✅ تم إنشاء splash.png (صورة واحدة)"
           
-          # إنشاء Progress Bar مخصص
-          cat > android/app/src/main/res/drawable/progress_bar.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <item android:id="@android:id/background">
-                  <shape>
-                      <corners android:radius="10dp" />
-                      <solid android:color="#333333" />
-                      <stroke 
-                          android:width="1dp" 
-                          android:color="#555555" />
-                  </shape>
-              </item>
-              <item android:id="@android:id/progress">
-                  <clip>
-                      <shape>
-                          <corners android:radius="10dp" />
-                          <gradient
-                              android:startColor="#FFFFFF"
-                              android:centerColor="#CCCCCC"
-                              android:endColor="#999999"
-                              android:angle="0" />
-                      </shape>
-                  </clip>
-              </item>
-          </layer-list>
-          EOF
-          echo "  ✅ تم إنشاء Progress Bar"
-          
-          # إنشاء خلفية Splash Screen مع Progress Bar
+          # إنشاء خلفية Splash Screen بسيطة جداً - صورة واحدة فقط
           cat > android/app/src/main/res/drawable/splash_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <!-- الخلفية السوداء -->
               <item>
                   <shape>
                       <solid android:color="${APP_COLOR}" />
                   </shape>
               </item>
-              
-              <!-- الأيقونة في المنتصف -->
               <item
                   android:gravity="center"
-                  android:width="200dp"
-                  android:height="200dp"
-                  android:top="50dp">
+                  android:width="250dp"
+                  android:height="250dp">
                   <bitmap
                       android:src="@drawable/splash"
                       android:gravity="center"
                       android:filter="true" />
               </item>
-              
-              <!-- Progress Bar في الأسفل -->
-              <item
-                  android:gravity="bottom|center"
-                  android:width="250dp"
-                  android:height="4dp"
-                  android:bottom="80dp">
-                  <shape>
-                      <size android:width="250dp" android:height="4dp" />
-                      <solid android:color="#333333" />
-                      <corners android:radius="2dp" />
-                  </shape>
-              </item>
           </layer-list>
           EOF
-          echo "  ✅ تم إنشاء splash_background.xml مع Progress Bar"
+          echo "  ✅ تم إنشاء splash_background.xml"
           
           # إنشاء styles.xml
           cat > android/app/src/main/res/values/styles.xml << EOF
@@ -389,14 +322,6 @@ jobs:
                   <item name="android:backgroundDimEnabled">false</item>
               </style>
               
-              <!-- Progress Bar Style -->
-              <style name="ProgressBarStyle" parent="Widget.AppCompat.ProgressBar.Horizontal">
-                  <item name="android:progressDrawable">@drawable/progress_bar</item>
-                  <item name="android:minHeight">4dp</item>
-                  <item name="android:maxHeight">4dp</item>
-                  <item name="android:indeterminate">true</item>
-              </style>
-              
               <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
                   <item name="android:background">${APP_COLOR}</item>
               </style>
@@ -410,8 +335,6 @@ jobs:
           <resources>
               <color name="windowBackground">${APP_COLOR}</color>
               <color name="primaryColor">${APP_COLOR}</color>
-              <color name="progressBarColor">#FFFFFF</color>
-              <color name="progressBarBackground">#333333</color>
           </resources>
           EOF
           echo "  ✅ تم إنشاء colors.xml"
@@ -428,7 +351,7 @@ jobs:
           echo "  ✅ تم إنشاء strings.xml"
           
           echo ""
-          echo "✨ تم إنشاء Splash Screen سوداء مع Progress Bar!"
+          echo "✨ تم إنشاء Splash Screen بصورة واحدة فقط!"
 
       - name: 🎨 إنشاء الأيقونة التكيفية (لأندرويد 8+)
         run: |
@@ -491,7 +414,6 @@ jobs:
         run: |
           MAIN_ACTIVITY="android/app/src/main/java/$(echo ${{ github.event.inputs.app_id }} | tr '.' '/')/MainActivity.java"
           
-          # البحث عن الملف إذا كان المسار مختلف
           if [ ! -f "$MAIN_ACTIVITY" ]; then
             MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java" -type f | head -1)
           fi
@@ -499,7 +421,6 @@ jobs:
           if [ -f "$MAIN_ACTIVITY" ]; then
             echo "📝 جاري تعديل $MAIN_ACTIVITY لإضافة دعم الكيبورد..."
             
-            # إضافة imports إذا لم تكن موجودة
             if ! grep -q "import android.view.WindowManager;" $MAIN_ACTIVITY; then
               sed -i '/^package/a import android.view.WindowManager;' $MAIN_ACTIVITY
             fi
@@ -512,9 +433,8 @@ jobs:
               sed -i '/^package/a import androidx.core.view.WindowCompat;' $MAIN_ACTIVITY
             fi
             
-            # إضافة كود دعم الكيبورد في onCreate
             if ! grep -q "getWindow().setSoftInputMode" $MAIN_ACTIVITY; then
-              sed -i '/super.onCreate/a \        // دعم الكيبورد وإظهاره تلقائياً\n        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);\n        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\n            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);\n        }' $MAIN_ACTIVITY
+              sed -i '/super.onCreate/a \        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);\n        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\n            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);\n        }' $MAIN_ACTIVITY
             fi
             
             echo "✅ تم تعديل MainActivity.java لدعم الكيبورد"
@@ -531,7 +451,6 @@ jobs:
           echo "🔍 التحقق من الملفات:"
           [ -f "android/app/src/main/res/drawable/splash.png" ] && echo "  ✅ splash.png"
           [ -f "android/app/src/main/res/drawable/splash_background.xml" ] && echo "  ✅ splash_background.xml"
-          [ -f "android/app/src/main/res/drawable/progress_bar.xml" ] && echo "  ✅ progress_bar.xml"
           
           if [ -d "android/app/src/main/assets" ]; then
             echo "  💾 assets: $(find android/app/src/main/assets -type f | wc -l) ملفات"
@@ -551,13 +470,12 @@ jobs:
             echo "📱 حجم الملف: $(du -h $APK_PATH | cut -f1)"
             echo "📋 اسم التطبيق: ${{ github.event.inputs.app_name }}"
             echo "⬛ لون الخلفية: ${{ github.event.inputs.app_color }}"
-            echo "⏱️ مدة Splash: ${{ github.event.inputs.splash_duration }}ms"
             echo ""
-            echo "✨ المميزات المضافة:"
-            echo "  ⬛ شاشة بداية سوداء"
-            echo "  🔄 Progress Bar في الأسفل"
-            echo "  ⌨️ دعم الكيبورد كامل"
-            echo "  📱 شريط حالة شفاف"
+            echo "✨ المميزات:"
+            echo "  🖼️ صورة واحدة فقط عند الفتح"
+            echo "  🚫 بدون Spinner أو تحميل"
+            echo "  ⚡ فتح سريع ومباشر"
+            echo "  ⌨️ دعم الكيبورد"
           else
             echo "❌ فشل بناء APK"
             exit 1
@@ -574,17 +492,17 @@ jobs:
         run: |
           echo "╔════════════════════════════════════════╗"
           echo "║  🎊 تم بناء التطبيق بنجاح!           ║"
-          echo "║  ⬛ شاشة سوداء + ⌨️ دعم الكيبورد     ║"
+          echo "║  🖼️ صورة واحدة فقط عند الفتح       ║"
           echo "╚════════════════════════════════════════╝"
           echo ""
           echo "📱 اسم التطبيق: ${{ github.event.inputs.app_name }}"
           echo "⬛ لون الخلفية: ${{ github.event.inputs.app_color }}"
           echo ""
-          echo "✨ ما تم إضافته:"
-          echo "  ⬛ شاشة Splash سوداء بدل الحمراء"
-          echo "  🔄 شريط تحميل (Progress Bar) في الأسفل"
-          echo "  ⌨️ دعم كامل للوحة المفاتيح"
-          echo "  📱 الكيبورد يظهر مع الاختصارات"
-          echo "  🎨 تصميم عصري وجميل"
+          echo "✨ طريقة عمل التطبيق:"
+          echo "  1️⃣ تفتح التطبيق"
+          echo "  2️⃣ تظهر الأيقونة في المنتصف"
+          echo "  3️⃣ يفتح التطبيق مباشرة"
+          echo "  ❌ لا يوجد Spinner أو تحميل"
+          echo "  ❌ لا توجد صورة ثانية"
           echo ""
           echo "📥 يمكنك تحميل الـ APK من قسم Artifacts"
