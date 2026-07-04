@@ -1,0 +1,209 @@
+name: 🃏 Build APK - Joker V3 (Custom Icon + Storage)
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: '✏️ اسم التطبيق (اكتبه بنفسك)'
+        required: true
+        default: 'FLARE'
+        type: string
+      app_id:
+        description: '🆔 App ID (مثال: com.flare.orange)'
+        required: true
+        default: 'com.flare.orange'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: 📱 Build ${{ github.event.inputs.app_name }} APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 Install Capacitor + Tools
+        run: |
+          npm install -g @capacitor/cli @capacitor/core @capacitor/android
+          sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: 📁 Create www folder
+        run: |
+          mkdir -p www
+          cp *.html www/ 2>/dev/null || true
+          cp *.js www/ 2>/dev/null || true
+          cp *.json www/ 2>/dev/null || true
+          cp *.svg www/ 2>/dev/null || true
+          cp *.png www/ 2>/dev/null || true
+          echo "✅ ملفات الموقع نسخت إلى www"
+
+      - name: 📄 Create package.json
+        run: |
+          cat > package.json << EOF
+          {
+            "name": "${{ github.event.inputs.app_name }}-app",
+            "version": "1.0.0",
+            "description": "${{ github.event.inputs.app_name }}",
+            "main": "www/index.html",
+            "dependencies": {
+              "@capacitor/android": "^6.0.0",
+              "@capacitor/core": "^6.0.0",
+              "@capacitor/cli": "^6.0.0"
+            }
+          }
+          EOF
+
+      - name: ⚙️ Create capacitor.config.json
+        run: |
+          cat > capacitor.config.json << EOF
+          {
+            "appId": "${{ github.event.inputs.app_id }}",
+            "appName": "${{ github.event.inputs.app_name }}",
+            "webDir": "www",
+            "server": { "androidScheme": "https", "allowNavigation": ["*"] },
+            "android": { 
+              "allowMixedContent": true,
+              "webContentsDebuggingEnabled": false
+            }
+          }
+          EOF
+
+      - name: 📦 Install Dependencies
+        run: npm install
+
+      - name: 🤖 Add Android Platform
+        run: npx cap add android
+
+      - name: 💾 Configure Storage (ذاكرة تخزين)
+        run: |
+          # تفعيل ذاكرة التخزين الداخلية
+          mkdir -p android/app/src/main/res/xml
+          
+          cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+              <base-config cleartextTrafficPermitted="true">
+                  <trust-anchors>
+                      <certificates src="system" />
+                  </trust-anchors>
+              </base-config>
+          </network-security-config>
+          EOF
+          
+          echo "✅ Storage configured!"
+
+      - name: 🖼️ Generate App Icon (من صورتك أو حرف)
+        run: |
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          
+          # ✅ إذا فيه صورة مخصصة → استخدمها
+          if [ -f "icon-512.png" ]; then
+            echo "🖼️ استخدام الصورة المخصصة icon-512.png"
+            convert icon-512.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert icon-512.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert icon-512.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert icon-512.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert icon-512.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            echo "✅ PNG Icon Ready!"
+          else
+            # ❌ لا توجد صورة → استخدم حرف
+            echo "🔤 لا توجد صورة - استخدام الحرف الأول من الاسم"
+            APP_LETTER=$(echo "${{ github.event.inputs.app_name }}" | cut -c1)
+            APP_COLOR="#ea580c"
+            
+            cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
+              <solid android:color="${APP_COLOR}"/>
+          </shape>
+          EOF
+            
+            cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp">
+              <text
+                  android:text="${APP_LETTER}"
+                  android:textSize="65dp"
+                  android:textColor="#FFFFFF"
+                  android:fontFamily="sans-serif-black"
+                  android:gravity="center"
+                  android:x="54dp"
+                  android:y="72dp"/>
+          </vector>
+          EOF
+            
+            cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_launcher_background"/>
+              <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+          </adaptive-icon>
+          EOF
+            echo "✅ Letter Icon Ready!"
+          fi
+
+      - name: 🎨 Configure Android
+        run: |
+          mkdir -p android/app/src/main/res/values
+          
+          cat > android/app/src/main/res/values/strings.xml << EOF
+          <?xml version='1.0' encoding='utf-8'?>
+          <resources>
+              <string name="app_name">${{ github.event.inputs.app_name }}</string>
+              <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
+          </resources>
+          EOF
+          
+          cat > android/app/src/main/res/values/colors.xml << 'EOF'
+          <?xml version='1.0' encoding='utf-8'?>
+          <resources>
+              <color name="colorPrimary">#ea580c</color>
+              <color name="colorPrimaryDark">#0f0a08</color>
+              <color name="colorAccent">#fb923c</color>
+          </resources>
+          EOF
+
+      - name: ⚡ Enable Storage Permissions
+        run: |
+          # إضافة صلاحيات التخزين
+          sed -i 's/<manifest/<manifest xmlns:android="http:\\/\\/schemas.android.com\\/apk\\/res\\/android"\\n    android:requestLegacyExternalStorage="true"/' android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          
+          echo "✅ Storage permissions added!"
+
+      - name: 🔄 Sync Assets
+        run: npx cap sync android
+
+      - name: 🔨 Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: 📤 Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
