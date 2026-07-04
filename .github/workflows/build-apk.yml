@@ -1,4 +1,4 @@
-name: 🃏 Build APK - أيقونة احترافية
+name: 🃏 Build APK - Joker
 
 on:
   workflow_dispatch:
@@ -6,45 +6,33 @@ on:
       app_name:
         description: '📱 اسم التطبيق'
         required: true
-        default: 'تطبيقي'
+        default: 'جوكر'
         type: string
       app_id:
-        description: '🆔 App ID'
+        description: '🆔 App ID (مثال: com.joker.app)'
         required: true
-        default: 'com.myapp.app'
+        default: 'com.joker.app'
+        type: string
+      icon_file:
+        description: '🖼️ اسم ملف الأيقونة PNG (ضع الملف في المستودع)'
+        required: false
+        default: 'icon.png'
+        type: string
+      app_color:
+        description: '🎨 لون خلفية احتياطي'
+        required: false
+        default: '#FF0000'
         type: string
       app_letter:
-        description: '🔤 الحرف'
-        required: true
-        default: 'ت'
+        description: '🔤 حرف احتياطي'
+        required: false
+        default: 'ج'
         type: string
-      bg_color:
-        description: '🎨 لون الخلفية'
-        required: true
-        default: '#1A1A2E'
-        type: choice
-        options:
-          - '#1A1A2E'  # أسود مزرق
-          - '#16213E'  # كحلي غامق
-          - '#0F3460'  # أزرق غامق
-          - '#000000'  # أسود
-          - '#FFFFFF'  # أبيض
-          - '#E94560'  # أحمر
-          - '#533483'  # بنفسجي
-          - '#E90064'  # وردي غامق
-          - '#2B2B2B'  # رمادي غامق
-          - '#FF6B6B'  # مرجاني
-      icon_style:
-        description: '✨ نمط الأيقونة'
-        required: true
-        default: 'modern'
-        type: choice
-        options:
-          - 'modern'    # عصري مع تدرج
-          - 'minimal'   # بسيط وأنيق
-          - 'gradient'  # تدرج لوني
-          - 'neon'      # تأثير نيون
-          - 'glass'     # تأثير زجاجي
+      site_folder:
+        description: '📁 مجلد الموقع (اتركه فارغاً للجذر)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -78,9 +66,11 @@ jobs:
       - name: 📁 تجهيز www
         run: |
           mkdir -p www
-          cp *.html www/ 2>/dev/null || true
-          cp *.js www/ 2>/dev/null || true
-          cp *.css www/ 2>/dev/null || true
+          SRC="${{ github.event.inputs.site_folder }}"
+          [ -z "$SRC" ] && SRC="."
+          cp -r $SRC/* www/ 2>/dev/null || true
+          rm -rf www/.git www/.github www/node_modules 2>/dev/null || true
+          echo "✅ www جاهز"
 
       - name: ⚙️ إعداد Capacitor
         run: |
@@ -109,103 +99,57 @@ jobs:
           npm install
           npx cap add android
 
-      - name: 🎨 إنشاء أيقونة احترافية
+      - name: 🎨 الأيقونة
         run: |
-          # إعداد المتغيرات
+          ICON="${{ github.event.inputs.icon_file }}"
+          COLOR="${{ github.event.inputs.app_color }}"
           LETTER="${{ github.event.inputs.app_letter }}"
-          BG="${{ github.event.inputs.bg_color }}"
-          STYLE="${{ github.event.inputs.icon_style }}"
           
           # إنشاء المجلدات
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-          mkdir -p android/app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android/app/src/main/res/values
           
-          # تحديد لون النص (أبيض للخلفيات الغامقة، أسود للفاتحة)
-          if [[ "$BG" == "#FFFFFF" ]]; then
-            TEXT_COLOR="#1A1A2E"
+          # إنشاء foreground (صورة PNG مباشرة)
+          if [ -f "$ICON" ]; then
+            echo "✅ استخدام الصورة: $ICON"
+            convert "$ICON" -resize 432x432^ -gravity center -extent 432x432 \
+              android/app/src/main/res/drawable/ic_launcher_foreground.png
           else
-            TEXT_COLOR="#FFFFFF"
+            echo "⚠️ $ICON غير موجود، استخدام حرف"
+            convert -size 432x432 xc:"$COLOR" -gravity center \
+              -fill white -font Helvetica -pointsize 200 \
+              -annotate 0 "$LETTER" \
+              android/app/src/main/res/drawable/ic_launcher_foreground.png
           fi
           
-          # إنشاء أيقونة 432x432 حسب النمط المختار
-          case $STYLE in
-            'modern')
-              # خلفية متدرجة مع إطار
-              convert -size 432x432 \
-                \( xc:"$BG" \) \
-                \( -size 432x432 radial-gradient:"$BG"-"#00000000" \) \
-                -compose over -composite \
-                -fill "$TEXT_COLOR" -font Helvetica-Bold -pointsize 200 \
-                -gravity center -annotate 0 "$LETTER" \
-                -stroke "$TEXT_COLOR" -strokewidth 8 \
-                -fill none -draw "roundrectangle 30,30 402,402 80,80" \
-                android/app/src/main/res/drawable/ic_launcher_foreground.png
-              ;;
-              
-            'minimal')
-              # بسيط مع ظل
-              convert -size 432x432 xc:"$BG" \
-                -fill "$TEXT_COLOR" -font Helvetica-Bold -pointsize 220 \
-                -gravity center -annotate 0 "$LETTER" \
-                \( +clone -background black -shadow 60x10+5+5 \) \
-                +swap -background none -layers merge +repage \
-                android/app/src/main/res/drawable/ic_launcher_foreground.png
-              ;;
-              
-            'gradient')
-              # تدرج لوني مع حرف بارز
-              convert -size 432x432 \
-                gradient:"$BG"-"#00000000" \
-                \( +clone -rotate 45 \) \
-                -compose over -composite \
-                -fill white -font Helvetica-Bold -pointsize 200 \
-                -gravity center -annotate 0 "$LETTER" \
-                -alpha on -channel RGBA \
-                android/app/src/main/res/drawable/ic_launcher_foreground.png
-              ;;
-              
-            'neon')
-              # تأثير نيون
-              convert -size 432x432 xc:"#0A0A0A" \
-                -fill "$TEXT_COLOR" -font Helvetica-Bold -pointsize 200 \
-                -gravity center -annotate 0 "$LETTER" \
-                \( +clone -blur 0x20 -fill "$BG" -colorize 100% \) \
-                \( +clone -blur 0x10 -fill white -colorize 100% \) \
-                -compose over -composite \
-                android/app/src/main/res/drawable/ic_launcher_foreground.png
-              ;;
-              
-            'glass')
-              # تأثير زجاجي
-              convert -size 432x432 xc:"$BG" \
-                -fill "rgba(255,255,255,0.15)" \
-                -draw "roundrectangle 40,40 392,392 60,60" \
-                -fill white -font Helvetica-Bold -pointsize 200 \
-                -gravity center -annotate 0 "$LETTER" \
-                -alpha on -channel RGBA \
-                android/app/src/main/res/drawable/ic_launcher_foreground.png
-              ;;
-          esac
-          
-          # إنشاء أحجام مختلفة
+          # أحجام mipmap
           for size in 48 72 96 144 192; do
             case $size in
-              48) folder=mdpi;;
-              72) folder=hdpi;;
-              96) folder=xhdpi;;
-              144) folder=xxhdpi;;
-              192) folder=xxxhdpi;;
+              48) d=mdpi; p=24;;
+              72) d=hdpi; p=36;;
+              96) d=xhdpi; p=48;;
+              144) d=xxhdpi; p=72;;
+              192) d=xxxhdpi; p=96;;
             esac
-            convert android/app/src/main/res/drawable/ic_launcher_foreground.png \
-              -resize ${size}x${size} \
-              android/app/src/main/res/mipmap-${folder}/ic_launcher.png
+            if [ -f "$ICON" ]; then
+              convert "$ICON" -resize ${size}x${size} -gravity center -extent ${size}x${size} \
+                android/app/src/main/res/mipmap-${d}/ic_launcher.png
+            else
+              convert -size ${size}x${size} xc:"$COLOR" -gravity center \
+                -fill white -font Helvetica -pointsize $p \
+                -annotate 0 "$LETTER" \
+                android/app/src/main/res/mipmap-${d}/ic_launcher.png
+            fi
           done
           
-          # خلفية بيضاء للأيقونة التكيفية
+          # خلفية الأيقونة
           cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="108dp" android:height="108dp"
               android:viewportWidth="108" android:viewportHeight="108">
@@ -222,9 +166,9 @@ jobs:
           </adaptive-icon>
           EOF
           
-          echo "✅ تم إنشاء أيقونة احترافية بنمط $STYLE"
+          echo "✅ الأيقونة جاهزة"
 
-      - name: 📝 إعدادات التطبيق
+      - name: 📝 اسم التطبيق
         run: |
           mkdir -p android/app/src/main/res/values
           cat > android/app/src/main/res/values/strings.xml << EOF
