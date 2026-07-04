@@ -1,23 +1,48 @@
-name: 🃏 Build APK - Any Website
+name: 🃏 Build APK - Joker (All Sites)
 
 on:
   workflow_dispatch:
     inputs:
       app_name:
-        description: '✏️ اسم التطبيق'
+        description: '📱 اسم التطبيق'
         required: true
-        default: 'My App'
-        type: string
+        default: 'FLARE'
+        type: choice
+        options:
+          - 'LEGACY'
+          - 'VIOLET'
+          - 'GREEN'
+          - 'FLARE'
       app_id:
-        description: '🆔 App ID (مثال: com.myapp.name)'
+        description: '🆔 App ID'
         required: true
-        default: 'com.myapp.name'
-        type: string
-      website_url:
-        description: '🌐 رابط الموقع (مثال: https://mysite.com)'
+        default: 'com.flare.orange'
+        type: choice
+        options:
+          - 'com.legacy.gold'
+          - 'com.violet.purple'
+          - 'com.green.emerald'
+          - 'com.flare.orange'
+      app_color:
+        description: '🎨 لون الأيقونة'
         required: true
-        default: 'https://example.com'
-        type: string
+        default: '#ea580c'
+        type: choice
+        options:
+          - '#d4a843'
+          - '#7c3aed'
+          - '#059669'
+          - '#ea580c'
+      app_letter:
+        description: '🔤 حرف الأيقونة'
+        required: true
+        default: 'F'
+        type: choice
+        options:
+          - 'L'
+          - 'V'
+          - 'G'
+          - 'F'
 
 permissions:
   contents: write
@@ -42,54 +67,17 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 📦 Install Capacitor + Tools
-        run: |
-          npm install -g @capacitor/cli @capacitor/core @capacitor/android
-          sudo apt-get update && sudo apt-get install -y imagemagick
+      - name: 📦 Install Capacitor
+        run: npm install -g @capacitor/cli @capacitor/core @capacitor/android
 
-      - name: 📁 Create WebView App
+      - name: 📁 Create www folder
         run: |
           mkdir -p www
-          
-          # إنشاء صفحة WebView بسيطة تحمل الموقع
-          cat > www/index.html << EOF
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-              <title>${{ github.event.inputs.app_name }}</title>
-              <style>
-                  *{margin:0;padding:0;box-sizing:border-box}
-                  body,html{width:100%;height:100%;overflow:hidden;background:#000}
-                  #loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0f0a08;z-index:9999;flex-direction:column;gap:12px}
-                  .spinner{width:40px;height:40px;border:3px solid rgba(234,88,12,0.2);border-top-color:#ea580c;border-radius:50%;animation:spin 0.8s linear infinite}
-                  @keyframes spin{to{transform:rotate(360deg)}}
-                  #loader p{color:#fff;font-family:sans-serif;font-size:14px}
-                  iframe{width:100%;height:100%;border:none;display:none}
-              </style>
-          </head>
-          <body>
-              <div id="loader">
-                  <div class="spinner"></div>
-                  <p>${{ github.event.inputs.app_name }}</p>
-              </div>
-              <iframe id="webview" src="${{ github.event.inputs.website_url }}" allow="camera;microphone;geolocation;autoplay;encrypted-media;picture-in-picture" sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-downloads"></iframe>
-              <script>
-                  document.getElementById('webview').onload = function() {
-                      document.getElementById('loader').style.display = 'none';
-                      this.style.display = 'block';
-                  };
-                  setTimeout(function() {
-                      document.getElementById('loader').style.display = 'none';
-                      document.getElementById('webview').style.display = 'block';
-                  }, 8000);
-              </script>
-          </body>
-          </html>
-          EOF
-          
-          echo "✅ WebView App created!"
+          cp *.html www/ 2>/dev/null || true
+          cp *.js www/ 2>/dev/null || true
+          cp *.json www/ 2>/dev/null || true
+          cp *.svg www/ 2>/dev/null || true
+          cp *.png www/ 2>/dev/null || true
 
       - name: 📄 Create package.json
         run: |
@@ -97,7 +85,7 @@ jobs:
           {
             "name": "${{ github.event.inputs.app_name }}-app",
             "version": "1.0.0",
-            "description": "${{ github.event.inputs.app_name }}",
+            "description": "${{ github.event.inputs.app_name }} - App",
             "main": "www/index.html",
             "dependencies": {
               "@capacitor/android": "^6.0.0",
@@ -114,15 +102,8 @@ jobs:
             "appId": "${{ github.event.inputs.app_id }}",
             "appName": "${{ github.event.inputs.app_name }}",
             "webDir": "www",
-            "server": { 
-              "androidScheme": "https",
-              "allowNavigation": ["*"],
-              "hostname": "localhost"
-            },
-            "android": { 
-              "allowMixedContent": true,
-              "webContentsDebuggingEnabled": false
-            }
+            "server": { "androidScheme": "https" },
+            "android": { "allowMixedContent": true }
           }
           EOF
 
@@ -132,44 +113,25 @@ jobs:
       - name: 🤖 Add Android Platform
         run: npx cap add android
 
-      - name: 🖼️ Generate App Icon
+      - name: 🎨 Generate Custom Icon
         run: |
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
           
-          # ✅ إذا فيه صورة → استخدمها
-          if [ -f "icon-512.png" ]; then
-            echo "🖼️ استخدام الصورة المخصصة icon-512.png"
-            convert icon-512.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert icon-512.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert icon-512.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert icon-512.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert icon-512.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            echo "✅ PNG Icon Ready!"
-          else
-            # ❌ استخدم حرف أول من الاسم
-            echo "🔤 لا توجد صورة - استخدام الحرف الأول"
-            APP_LETTER=$(echo "${{ github.event.inputs.app_name }}" | cut -c1)
-            
-            cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF2
+          cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="#ea580c"/>
+              <solid android:color="${{ github.event.inputs.app_color }}"/>
           </shape>
-          EOF2
-            
-            cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF3
+          EOF
+          
+          cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="108dp"
               android:height="108dp">
               <text
-                  android:text="${APP_LETTER}"
+                  android:text="${{ github.event.inputs.app_letter }}"
                   android:textSize="65dp"
                   android:textColor="#FFFFFF"
                   android:fontFamily="sans-serif-black"
@@ -177,22 +139,21 @@ jobs:
                   android:x="54dp"
                   android:y="72dp"/>
           </vector>
-          EOF3
-            
-            cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF4'
+          EOF
+          
+          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
               <background android:drawable="@drawable/ic_launcher_background"/>
               <foreground android:drawable="@drawable/ic_launcher_foreground"/>
           </adaptive-icon>
-          EOF4
-            echo "✅ Letter Icon Ready!"
-          fi
+          EOF
+          
+          echo "✅ ${{ github.event.inputs.app_name }} أيقونة جاهزة!"
 
-      - name: 🎨 Configure Android
+      - name: 🎨 Customize Android Strings
         run: |
           mkdir -p android/app/src/main/res/values
-          
           cat > android/app/src/main/res/values/strings.xml << EOF
           <?xml version='1.0' encoding='utf-8'?>
           <resources>
