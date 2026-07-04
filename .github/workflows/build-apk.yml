@@ -9,19 +9,29 @@ on:
         default: 'MyApp'
         type: string
       app_id:
-        description: '🆔 App ID'
+        description: '🆔 App ID (مثال: com.example.myapp)'
         required: true
         default: 'com.example.myapp'
         type: string
       icon_path:
-        description: '🖼️ مسار الأيقونة (مثال: icon-512.png)'
+        description: '🖼️ مسار الأيقونة مع الاسم (مثال: icons/myicon.png)'
         required: true
-        default: 'icon-512.png'
+        default: 'icons/icon.png'
         type: string
-      icon_bg:
+      icon_bg_color:
         description: '🎨 لون خلفية الأيقونة (مثال: #FFFFFF)'
         required: false
         default: '#FFFFFF'
+        type: string
+      app_color:
+        description: '🎨 لون التطبيق الاحتياطي (عند عدم وجود الصورة)'
+        required: false
+        default: '#2196F3'
+        type: string
+      app_letter:
+        description: '🔤 حرف الأيقونة الاحتياطي (عند عدم وجود الصورة)'
+        required: false
+        default: 'A'
         type: string
       app_version:
         description: '📌 إصدار التطبيق'
@@ -57,7 +67,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 📦 تثبيت الأدوات
+      - name: 📦 تثبيت الأدوات الأساسية
         run: |
           npm install -g @capacitor/cli @capacitor/core @capacitor/android
           sudo apt-get update -qq
@@ -65,7 +75,6 @@ jobs:
 
       - name: 📁 تحضير محتوى التطبيق
         run: |
-          # إنشاء مجلد www
           mkdir -p www
           
           # نسخ جميع ملفات المشروع
@@ -78,8 +87,47 @@ jobs:
           cp *.jpg www/ 2>/dev/null || echo "⚠️ لا توجد ملفات JPG"
           cp *.jpeg www/ 2>/dev/null || echo "⚠️ لا توجد ملفات JPEG"
           cp *.webp www/ 2>/dev/null || echo "⚠️ لا توجد ملفات WebP"
+          cp *.ico www/ 2>/dev/null || echo "⚠️ لا توجد ملفات ICO"
           
-          # عرض محتويات www للتأكيد
+          # إنشاء index.html افتراضي إذا لم يوجد
+          if [ ! -f www/index.html ]; then
+            echo "⚠️ لم يتم العثور على index.html، جاري إنشاء صفحة افتراضية..."
+            cat > www/index.html << 'DEFAULT_HTML'
+          <!DOCTYPE html>
+          <html lang="ar" dir="rtl">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>تطبيق جاهز</title>
+              <style>
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
+                  body {
+                      font-family: 'Segoe UI', Tahoma, sans-serif;
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                      min-height: 100vh;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white;
+                  }
+                  .container {
+                      text-align: center;
+                      padding: 2rem;
+                  }
+                  h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+                  p { font-size: 1.2rem; opacity: 0.9; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>🚀 التطبيق جاهز!</h1>
+                  <p>تم بناء التطبيق بنجاح</p>
+              </div>
+          </body>
+          </html>
+          DEFAULT_HTML
+          fi
+          
           echo "📂 محتويات مجلد www:"
           ls -la www/
 
@@ -89,11 +137,15 @@ jobs:
           {
             "name": "${{ github.event.inputs.app_name }}-app",
             "version": "${{ github.event.inputs.app_version }}",
-            "description": "${{ github.event.inputs.app_name }} - تطبيق Android",
+            "description": "${{ github.event.inputs.app_name }} - تطبيق Android احترافي",
             "main": "www/index.html",
             "scripts": {
-              "build": "echo 'Build complete'"
+              "build": "echo 'Build complete'",
+              "start": "echo 'App started'"
             },
+            "keywords": ["android", "capacitor", "app"],
+            "author": "Joker Builder",
+            "license": "MIT",
             "dependencies": {
               "@capacitor/android": "^6.0.0",
               "@capacitor/core": "^6.0.0",
@@ -126,17 +178,10 @@ jobs:
       - name: 🤖 إضافة منصة Android
         run: npx cap add android
 
-      - name: 🎨 معالجة الأيقونات وإنشاء APK كامل
+      - name: 🎨 معالجة الأيقونات بشكل احترافي
+        id: icon
         run: |
-          ICON_PATH="${{ github.event.inputs.icon_path }}"
-          BG_COLOR="${{ github.event.inputs.icon_bg }}"
-          APP_NAME="${{ github.event.inputs.app_name }}"
-          VERSION_CODE="${{ github.event.inputs.app_version_code }}"
-          VERSION_NAME="${{ github.event.inputs.app_version }}"
-          
-          echo "🖼️ بدء معالجة الأيقونات..."
-          
-          # إنشاء جميع المجلدات المطلوبة
+          # إنشاء المجلدات المطلوبة
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
           mkdir -p android/app/src/main/res/mipmap-mdpi
@@ -146,15 +191,26 @@ jobs:
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android/app/src/main/res/values
           
-          # التحقق من وجود الصورة
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          APP_COLOR="${{ github.event.inputs.app_color }}"
+          APP_LETTER="${{ github.event.inputs.app_letter }}"
+          ICON_PATH="${{ github.event.inputs.icon_path }}"
+          BG_COLOR="${{ github.event.inputs.icon_bg_color }}"
+          
+          echo "🎨 بدء معالجة الأيقونات..."
+          echo "📱 اسم التطبيق: $APP_NAME"
+          
+          # التحقق من وجود الصورة ومعالجتها
           if [ -f "$ICON_PATH" ]; then
             echo "✅ تم العثور على الصورة: $ICON_PATH"
             
-            # قراءة أبعاد الصورة الأصلية
-            dimensions=$(identify -format "%wx%h" "$ICON_PATH")
+            # قراءة معلومات الصورة
+            dimensions=$(identify -format "%wx%h" "$ICON_PATH" 2>/dev/null || echo "غير معروف")
+            file_size=$(du -h "$ICON_PATH" | cut -f1)
             echo "📏 أبعاد الصورة: $dimensions"
+            echo "📦 حجم الملف: $file_size"
             
-            # 1️⃣ الأيقونة التكيفية (foreground) - 432x432 مع شفافية
+            # 1️⃣ الأيقونة التكيفية الرئيسية (foreground) - 432x432
             convert "$ICON_PATH" \
               -resize 432x432^ \
               -gravity center \
@@ -163,7 +219,7 @@ jobs:
               android/app/src/main/res/drawable/ic_launcher_foreground.png
             echo "✅ تم إنشاء foreground (432x432)"
             
-            # 2️⃣ أيقونات mipmap للأجهزة القديمة
+            # 2️⃣ أيقونات mipmap للأجهزة المختلفة
             convert "$ICON_PATH" -resize 48x48 -gravity center -extent 48x48 \
               android/app/src/main/res/mipmap-mdpi/ic_launcher.png
             convert "$ICON_PATH" -resize 72x72 -gravity center -extent 72x72 \
@@ -176,24 +232,84 @@ jobs:
               android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
             echo "✅ تم إنشاء أيقونات mipmap (48-192)"
             
-            # 3️⃣ نسخة للـ drawable
-            cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png \
-              android/app/src/main/res/drawable/ic_launcher.png
-            
-            # 4️⃣ أيقونة إضافية للاستخدامات العامة
+            # 3️⃣ أيقونة إضافية بحجم كبير
             convert "$ICON_PATH" -resize 512x512 \
               android/app/src/main/res/drawable/app_icon.png
             echo "✅ تم إنشاء أيقونة إضافية (512x512)"
             
+            # 4️⃣ نسخة احتياطية للأجهزة القديمة
+            cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png \
+              android/app/src/main/res/drawable/ic_launcher.png
+            
+            echo "📱 تم استخدام الصورة الأصلية بنجاح!"
+            
           else
-            echo "❌ الصورة غير موجودة: $ICON_PATH"
+            echo "⚠️ الصورة غير موجودة: $ICON_PATH"
+            echo "🔍 البحث عن الصور المتاحة..."
+            find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) 2>/dev/null | head -5
             echo ""
-            echo "🔍 البحث عن الصور المتاحة:"
-            find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) 2>/dev/null
-            exit 1
+            echo "🎨 جاري إنشاء أيقونة افتراضية احترافية..."
+            
+            # إنشاء أيقونة افتراضية جميلة
+            convert -size 1024x1024 xc:"$APP_COLOR" \
+              -gravity center \
+              -fill white \
+              -font Helvetica-Bold \
+              -pointsize 500 \
+              -annotate 0 "$APP_LETTER" \
+              -alpha set \
+              android/app/src/main/res/drawable/ic_launcher_foreground.png
+            
+            # إنشاء أيقونات mipmap من الأيقونة الافتراضية
+            convert -size 1024x1024 xc:"$APP_COLOR" \
+              -gravity center -fill white \
+              -font Helvetica-Bold -pointsize 500 \
+              -annotate 0 "$APP_LETTER" \
+              -resize 48x48 \
+              android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            
+            convert -size 1024x1024 xc:"$APP_COLOR" \
+              -gravity center -fill white \
+              -font Helvetica-Bold -pointsize 500 \
+              -annotate 0 "$APP_LETTER" \
+              -resize 72x72 \
+              android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            
+            convert -size 1024x1024 xc:"$APP_COLOR" \
+              -gravity center -fill white \
+              -font Helvetica-Bold -pointsize 500 \
+              -annotate 0 "$APP_LETTER" \
+              -resize 96x96 \
+              android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            
+            convert -size 1024x1024 xc:"$APP_COLOR" \
+              -gravity center -fill white \
+              -font Helvetica-Bold -pointsize 500 \
+              -annotate 0 "$APP_LETTER" \
+              -resize 144x144 \
+              android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            
+            convert -size 1024x1024 xc:"$APP_COLOR" \
+              -gravity center -fill white \
+              -font Helvetica-Bold -pointsize 500 \
+              -annotate 0 "$APP_LETTER" \
+              -resize 192x192 \
+              android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            
+            cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png \
+              android/app/src/main/res/drawable/ic_launcher.png
+            
+            convert -size 1024x1024 xc:"$APP_COLOR" \
+              -gravity center -fill white \
+              -font Helvetica-Bold -pointsize 500 \
+              -annotate 0 "$APP_LETTER" \
+              -resize 512x512 \
+              android/app/src/main/res/drawable/app_icon.png
+            
+            echo "✅ تم إنشاء أيقونة افتراضية بالحرف '$APP_LETTER' واللون $APP_COLOR"
           fi
           
-          # 5️⃣ إنشاء ملف الخلفية التكيفية
+          # 5️⃣ إنشاء خلفية الأيقونة التكيفية
           cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -208,7 +324,7 @@ jobs:
           EOF
           echo "✅ تم إنشاء خلفية الأيقونة التكيفية"
           
-          # 6️⃣ إنشاء الأيقونة التكيفية (Android 8+)
+          # 6️⃣ إنشاء الأيقونات التكيفية (Android 8+)
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -226,7 +342,7 @@ jobs:
           EOF
           echo "✅ تم إنشاء الأيقونات التكيفية"
           
-          # 7️⃣ إنشاء قيم الألوان
+          # 7️⃣ إنشاء ملف الألوان
           cat > android/app/src/main/res/values/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
@@ -238,10 +354,11 @@ jobs:
           echo "🎉 تم تجهيز جميع الأيقونات بنجاح!"
           echo "📱 الأيقونات التكيفية: ✅"
           echo "📱 أيقونات mipmap: ✅"
+          echo "📱 الأيقونات المستديرة: ✅"
           echo "📱 أيقونة إضافية: ✅"
           echo "🎨 لون الخلفية: ${BG_COLOR}"
 
-      - name: 🎨 تخصيص اسم التطبيق والإعدادات
+      - name: 🎨 تخصيص إعدادات Android
         run: |
           # إنشاء ملف strings.xml
           cat > android/app/src/main/res/values/strings.xml << EOF
@@ -252,10 +369,10 @@ jobs:
           </resources>
           EOF
           
-          # تحديث ملف build.gradle
+          # تحديث build.gradle
           cat > android/app/build.gradle << 'BUILDGRADLE'
           apply plugin: 'com.android.application'
-          
+
           android {
               namespace "${{ github.event.inputs.app_id }}"
               compileSdkVersion 34
@@ -281,7 +398,7 @@ jobs:
                   targetCompatibility JavaVersion.VERSION_17
               }
           }
-          
+
           dependencies {
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'com.google.android.material:material:1.11.0'
@@ -292,7 +409,7 @@ jobs:
           }
           BUILDGRADLE
           
-          echo "✅ تم تخصيص إعدادات التطبيق"
+          echo "✅ تم تخصيص إعدادات Android"
 
       - name: 🔄 مزامنة Capacitor
         run: npx cap sync android
@@ -302,6 +419,10 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
+          
+          # عرض حجم الملف الناتج
+          echo "📦 حجم ملف APK:"
+          du -h app/build/outputs/apk/debug/app-debug.apk
 
       - name: 📤 رفع ملف APK
         uses: actions/upload-artifact@v4
@@ -310,13 +431,20 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 90
 
-      - name: 📊 عرض معلومات البناء
+      - name: 📊 عرض ملخص البناء
         run: |
-          echo "🎉 اكتمل البناء بنجاح!"
+          echo "========================================="
+          echo "🎉 تم بناء التطبيق بنجاح!"
+          echo "========================================="
           echo "📱 اسم التطبيق: ${{ github.event.inputs.app_name }}"
           echo "🆔 App ID: ${{ github.event.inputs.app_id }}"
           echo "📌 الإصدار: ${{ github.event.inputs.app_version }}"
           echo "🔢 رمز الإصدار: ${{ github.event.inputs.app_version_code }}"
-          echo "🖼️ الأيقونة: ${{ github.event.inputs.icon_path }}"
-          echo "🎨 لون الخلفية: ${{ github.event.inputs.icon_bg }}"
+          echo "🖼️ مسار الأيقونة: ${{ github.event.inputs.icon_path }}"
+          echo "🎨 لون الخلفية: ${{ github.event.inputs.icon_bg_color }}"
+          echo "🎨 اللون الاحتياطي: ${{ github.event.inputs.app_color }}"
+          echo "🔤 الحرف الاحتياطي: ${{ github.event.inputs.app_letter }}"
           echo "📦 حجم الملف: $(du -h android/app/build/outputs/apk/debug/app-debug.apk | cut -f1)"
+          echo "========================================="
+          echo "📲 يمكنك تحميل التطبيق من قسم Artifacts"
+          echo "========================================="
