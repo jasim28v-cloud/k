@@ -49,128 +49,72 @@ permissions:
 
 jobs:
   build-apk:
-    name: 📱 Build ${{ github.event.inputs.app_name }} APK
+    name: Build APK
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Checkout Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: ☕ Setup Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🟢 Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: 📦 Install Tools
+      - name: Install Tools
         run: |
           npm install -g @capacitor/cli @capacitor/core @capacitor/android
           sudo apt-get update -qq
           sudo apt-get install -y imagemagick
 
-      - name: 📁 Prepare App Content
+      - name: Prepare App Content
         run: |
           mkdir -p www
           
-          # Copy all project files
-          cp -r *.html www/ 2>/dev/null || echo "No HTML files"
-          cp -r *.js www/ 2>/dev/null || echo "No JS files"
-          cp -r *.css www/ 2>/dev/null || echo "No CSS files"
-          cp -r *.json www/ 2>/dev/null || echo "No JSON files"
-          cp -r *.svg www/ 2>/dev/null || echo "No SVG files"
-          cp -r *.png www/ 2>/dev/null || echo "No PNG files"
-          cp -r *.jpg www/ 2>/dev/null || echo "No JPG files"
-          cp -r *.jpeg www/ 2>/dev/null || echo "No JPEG files"
-          cp -r *.webp www/ 2>/dev/null || echo "No WebP files"
+          cp *.html www/ 2>/dev/null || true
+          cp *.js www/ 2>/dev/null || true
+          cp *.css www/ 2>/dev/null || true
+          cp *.json www/ 2>/dev/null || true
+          cp *.svg www/ 2>/dev/null || true
+          cp *.png www/ 2>/dev/null || true
+          cp *.jpg www/ 2>/dev/null || true
+          cp *.jpeg www/ 2>/dev/null || true
+          cp *.webp www/ 2>/dev/null || true
           
-          # Create index.html if not exists
           if [ ! -f www/index.html ]; then
-            echo "Creating default index.html..."
-            cat > www/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>App Ready</title>
-              <style>
-                  * { margin: 0; padding: 0; box-sizing: border-box; }
-                  body {
-                      font-family: Arial, sans-serif;
-                      display: flex;
-                      justify-content: center;
-                      align-items: center;
-                      min-height: 100vh;
-                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                      color: white;
-                  }
-                  .container { text-align: center; padding: 2rem; }
-                  h1 { font-size: 2.5rem; margin-bottom: 1rem; }
-                  p { font-size: 1.2rem; opacity: 0.9; }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <h1>🚀 App is Ready!</h1>
-                  <p>Your app has been built successfully</p>
-              </div>
-          </body>
-          </html>
-          EOF
+            echo '<html><body><h1>App Ready</h1></body></html>' > www/index.html
           fi
-          
-          echo "📂 www folder contents:"
-          ls -la www/
 
-      - name: 📄 Create package.json
+      - name: Create package.json
         run: |
-          cat > package.json << PACKAGEEOF
-          {
-            "name": "app-name",
-            "version": "1.0.0",
-            "description": "Android App",
-            "main": "www/index.html",
-            "dependencies": {
-              "@capacitor/android": "^6.0.0",
-              "@capacitor/core": "^6.0.0",
-              "@capacitor/cli": "^6.0.0"
-            }
-          }
-          PACKAGEEOF
+          echo '{"name":"app","version":"1.0.0","main":"www/index.html","dependencies":{"@capacitor/android":"^6.0.0","@capacitor/core":"^6.0.0","@capacitor/cli":"^6.0.0"}}' > package.json
 
-      - name: ⚙️ Create capacitor.config.json
+      - name: Create capacitor.config.json
+        env:
+          APP_ID: ${{ github.event.inputs.app_id }}
+          APP_NAME: ${{ github.event.inputs.app_name }}
         run: |
-          APP_ID="${{ github.event.inputs.app_id }}"
-          APP_NAME="${{ github.event.inputs.app_name }}"
-          
-          cat > capacitor.config.json << CAPEOF
-          {
-            "appId": "${APP_ID}",
-            "appName": "${APP_NAME}",
-            "webDir": "www",
-            "server": { "androidScheme": "https" },
-            "android": { 
-              "allowMixedContent": true,
-              "captureInput": true,
-              "webContentsDebuggingEnabled": true
-            }
-          }
-          CAPEOF
+          echo "{\"appId\":\"${APP_ID}\",\"appName\":\"${APP_NAME}\",\"webDir\":\"www\",\"server\":{\"androidScheme\":\"https\"},\"android\":{\"allowMixedContent\":true}}" > capacitor.config.json
 
-      - name: 📦 Install Dependencies
+      - name: Install Dependencies
         run: npm install
 
-      - name: 🤖 Add Android Platform
+      - name: Add Android Platform
         run: npx cap add android
 
-      - name: 🎨 Generate App Icons
+      - name: Generate App Icons
+        env:
+          ICON_PATH: ${{ github.event.inputs.icon_path }}
+          BG_COLOR: ${{ github.event.inputs.icon_bg_color }}
+          APP_COLOR: ${{ github.event.inputs.app_color }}
+          APP_LETTER: ${{ github.event.inputs.app_letter }}
         run: |
-          # Create required directories
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
           mkdir -p android/app/src/main/res/mipmap-mdpi
@@ -180,232 +124,79 @@ jobs:
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android/app/src/main/res/values
           
-          ICON_PATH="${{ github.event.inputs.icon_path }}"
-          BG_COLOR="${{ github.event.inputs.icon_bg_color }}"
-          APP_COLOR="${{ github.event.inputs.app_color }}"
-          APP_LETTER="${{ github.event.inputs.app_letter }}"
-          
-          echo "Processing icons..."
-          echo "Icon path: ${ICON_PATH}"
-          
           if [ -f "${ICON_PATH}" ]; then
-            echo "✅ Found icon at: ${ICON_PATH}"
-            
-            # Get image info
-            dimensions=$(identify -format "%wx%h" "${ICON_PATH}" 2>/dev/null || echo "unknown")
-            echo "Image dimensions: ${dimensions}"
-            
-            # Generate foreground icon
-            convert "${ICON_PATH}" \
-              -resize 432x432^ \
-              -gravity center \
-              -extent 432x432 \
-              -alpha set \
-              android/app/src/main/res/drawable/ic_launcher_foreground.png
-            echo "✅ Created foreground icon"
-            
-            # Generate mipmap icons
-            convert "${ICON_PATH}" -resize 48x48 -gravity center -extent 48x48 \
-              android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert "${ICON_PATH}" -resize 72x72 -gravity center -extent 72x72 \
-              android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert "${ICON_PATH}" -resize 96x96 -gravity center -extent 96x96 \
-              android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert "${ICON_PATH}" -resize 144x144 -gravity center -extent 144x144 \
-              android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert "${ICON_PATH}" -resize 192x192 -gravity center -extent 192x192 \
-              android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            echo "✅ Created mipmap icons"
-            
-            # Copy to drawable
-            cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png \
-              android/app/src/main/res/drawable/ic_launcher.png
-            
+            echo "Found icon"
+            convert "${ICON_PATH}" -resize 432x432^ -gravity center -extent 432x432 -alpha set android/app/src/main/res/drawable/ic_launcher_foreground.png
+            convert "${ICON_PATH}" -resize 48x48 -gravity center -extent 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert "${ICON_PATH}" -resize 72x72 -gravity center -extent 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert "${ICON_PATH}" -resize 96x96 -gravity center -extent 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert "${ICON_PATH}" -resize 144x144 -gravity center -extent 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert "${ICON_PATH}" -resize 192x192 -gravity center -extent 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           else
-            echo "⚠️ Icon not found at: ${ICON_PATH}"
-            echo "Generating default icon..."
-            
-            # Generate default icon with letter
-            convert -size 1024x1024 xc:"${APP_COLOR}" \
-              -gravity center \
-              -fill white \
-              -font Helvetica-Bold \
-              -pointsize 500 \
-              -annotate 0 "${APP_LETTER}" \
-              android/app/src/main/res/drawable/ic_launcher_foreground.png
-            
-            # Generate mipmap icons from default
-            convert -size 1024x1024 xc:"${APP_COLOR}" \
-              -gravity center -fill white \
-              -font Helvetica-Bold -pointsize 500 \
-              -annotate 0 "${APP_LETTER}" \
-              -resize 48x48 \
-              android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            
-            convert -size 1024x1024 xc:"${APP_COLOR}" \
-              -gravity center -fill white \
-              -font Helvetica-Bold -pointsize 500 \
-              -annotate 0 "${APP_LETTER}" \
-              -resize 72x72 \
-              android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            
-            convert -size 1024x1024 xc:"${APP_COLOR}" \
-              -gravity center -fill white \
-              -font Helvetica-Bold -pointsize 500 \
-              -annotate 0 "${APP_LETTER}" \
-              -resize 96x96 \
-              android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            
-            convert -size 1024x1024 xc:"${APP_COLOR}" \
-              -gravity center -fill white \
-              -font Helvetica-Bold -pointsize 500 \
-              -annotate 0 "${APP_LETTER}" \
-              -resize 144x144 \
-              android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            
-            convert -size 1024x1024 xc:"${APP_COLOR}" \
-              -gravity center -fill white \
-              -font Helvetica-Bold -pointsize 500 \
-              -annotate 0 "${APP_LETTER}" \
-              -resize 192x192 \
-              android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            
-            cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png \
-              android/app/src/main/res/drawable/ic_launcher.png
-            
-            echo "✅ Created default icon with letter ${APP_LETTER}"
+            echo "Generating default icon"
+            convert -size 1024x1024 xc:"${APP_COLOR}" -gravity center -fill white -font Helvetica-Bold -pointsize 500 -annotate 0 "${APP_LETTER}" android/app/src/main/res/drawable/ic_launcher_foreground.png
+            convert -size 1024x1024 xc:"${APP_COLOR}" -gravity center -fill white -font Helvetica-Bold -pointsize 500 -annotate 0 "${APP_LETTER}" -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert -size 1024x1024 xc:"${APP_COLOR}" -gravity center -fill white -font Helvetica-Bold -pointsize 500 -annotate 0 "${APP_LETTER}" -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert -size 1024x1024 xc:"${APP_COLOR}" -gravity center -fill white -font Helvetica-Bold -pointsize 500 -annotate 0 "${APP_LETTER}" -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert -size 1024x1024 xc:"${APP_COLOR}" -gravity center -fill white -font Helvetica-Bold -pointsize 500 -annotate 0 "${APP_LETTER}" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert -size 1024x1024 xc:"${APP_COLOR}" -gravity center -fill white -font Helvetica-Bold -pointsize 500 -annotate 0 "${APP_LETTER}" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           fi
           
-          # Create adaptive icon background
-          cat > android/app/src/main/res/drawable/ic_launcher_background.xml << XMLEOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="108dp"
-              android:height="108dp"
-              android:viewportWidth="108"
-              android:viewportHeight="108">
-              <path
-                  android:fillColor="${BG_COLOR}"
-                  android:pathData="M0,0h108v108h-108z"/>
-          </vector>
-          XMLEOF
+          cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png android/app/src/main/res/drawable/ic_launcher.png
           
-          # Create adaptive icon XML
-          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'ADAPTIVEEOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@drawable/ic_launcher_background"/>
-              <foreground android:drawable="@drawable/ic_launcher_foreground"/>
-          </adaptive-icon>
-          ADAPTIVEEOF
+          echo "<?xml version=\"1.0\" encoding=\"utf-8\"?><vector xmlns:android=\"http://schemas.android.com/apk/res/android\" android:width=\"108dp\" android:height=\"108dp\" android:viewportWidth=\"108\" android:viewportHeight=\"108\"><path android:fillColor=\"${BG_COLOR}\" android:pathData=\"M0,0h108v108h-108z\"/></vector>" > android/app/src/main/res/drawable/ic_launcher_background.xml
           
-          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml << 'ROUNDEOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@drawable/ic_launcher_background"/>
-              <foreground android:drawable="@drawable/ic_launcher_foreground"/>
-          </adaptive-icon>
-          ROUNDEOF
+          echo "<?xml version=\"1.0\" encoding=\"utf-8\"?><adaptive-icon xmlns:android=\"http://schemas.android.com/apk/res/android\"><background android:drawable=\"@drawable/ic_launcher_background\"/><foreground android:drawable=\"@drawable/ic_launcher_foreground\"/></adaptive-icon>" > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          echo "<?xml version=\"1.0\" encoding=\"utf-8\"?><adaptive-icon xmlns:android=\"http://schemas.android.com/apk/res/android\"><background android:drawable=\"@drawable/ic_launcher_background\"/><foreground android:drawable=\"@drawable/ic_launcher_foreground\"/></adaptive-icon>" > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
           
-          # Create color values
-          cat > android/app/src/main/res/values/ic_launcher_background.xml << COLOREOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <color name="ic_launcher_background">${BG_COLOR}</color>
-          </resources>
-          COLOREOF
-          
-          echo "✅ All icons generated successfully!"
+          echo "<?xml version=\"1.0\" encoding=\"utf-8\"?><resources><color name=\"ic_launcher_background\">${BG_COLOR}</color></resources>" > android/app/src/main/res/values/ic_launcher_background.xml
 
-      - name: 🎨 Customize App Configuration
+      - name: Customize App Configuration
+        env:
+          APP_NAME: ${{ github.event.inputs.app_name }}
+          APP_ID: ${{ github.event.inputs.app_id }}
+          VERSION_CODE: ${{ github.event.inputs.app_version_code }}
+          VERSION_NAME: ${{ github.event.inputs.app_version }}
         run: |
-          APP_NAME="${{ github.event.inputs.app_name }}"
-          APP_ID="${{ github.event.inputs.app_id }}"
-          VERSION_CODE="${{ github.event.inputs.app_version_code }}"
-          VERSION_NAME="${{ github.event.inputs.app_version }}"
+          echo "<?xml version='1.0' encoding='utf-8'?><resources><string name=\"app_name\">${APP_NAME}</string><string name=\"title_activity_main\">${APP_NAME}</string></resources>" > android/app/src/main/res/values/strings.xml
           
-          # Create strings.xml
-          cat > android/app/src/main/res/values/strings.xml << STREOF
-          <?xml version='1.0' encoding='utf-8'?>
-          <resources>
-              <string name="app_name">${APP_NAME}</string>
-              <string name="title_activity_main">${APP_NAME}</string>
-          </resources>
-          STREOF
-          
-          # Update build.gradle
-          cat > android/app/build.gradle << GRADELEOF
-          apply plugin: 'com.android.application'
-
+          echo "apply plugin: 'com.android.application'
           android {
               namespace '${APP_ID}'
               compileSdkVersion 34
-              
               defaultConfig {
-                  applicationId "${APP_ID}"
+                  applicationId '${APP_ID}'
                   minSdkVersion 22
                   targetSdkVersion 34
                   versionCode ${VERSION_CODE}
-                  versionName "${VERSION_NAME}"
-                  testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+                  versionName '${VERSION_NAME}'
               }
-              
               buildTypes {
                   release {
                       minifyEnabled false
-                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
                   }
               }
-              
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
                   targetCompatibility JavaVersion.VERSION_17
               }
           }
-
           dependencies {
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'com.google.android.material:material:1.11.0'
-              implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-              testImplementation 'junit:junit:4.13.2'
-              androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-              androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-          }
-          GRADELEOF
-          
-          echo "✅ App configuration completed"
+          }" > android/app/build.gradle
 
-      - name: 🔄 Sync Capacitor
+      - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: 🔨 Build APK
+      - name: Build APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
-          
-          echo "📦 APK file size:"
-          du -h app/build/outputs/apk/debug/app-debug.apk
 
-      - name: 📤 Upload APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 90
-
-      - name: 📊 Build Summary
-        run: |
-          echo "========================================="
-          echo "🎉 Build Completed Successfully!"
-          echo "========================================="
-          echo "📱 App Name: ${{ github.event.inputs.app_name }}"
-          echo "🆔 App ID: ${{ github.event.inputs.app_id }}"
-          echo "📌 Version: ${{ github.event.inputs.app_version }}"
-          echo "🔢 Version Code: ${{ github.event.inputs.app_version_code }}"
-          echo "🖼️ Icon Path: ${{ github.event.inputs.icon_path }}"
-          echo "🎨 Background Color: ${{ github.event.inputs.icon_bg_color }}"
-          echo "📦 File Size: $(du -h android/app/build/outputs/apk/debug/app-debug.apk | cut -f1)"
-          echo "========================================="
-          echo "📲 Download your APK from the Artifacts section"
-          echo "========================================="
