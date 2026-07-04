@@ -1,4 +1,4 @@
-name: 🃏 Build APK - Joker (Offline)
+name: 📱 Build APK with Local Files
 
 on:
   workflow_dispatch:
@@ -6,74 +6,72 @@ on:
       app_name:
         description: '📱 اسم التطبيق'
         required: true
-        default: 'جوكر'
+        default: 'تطبيقي'
         type: string
       app_id:
-        description: '🆔 App ID (مثال: com.joker.app)'
+        description: '🆔 App ID'
         required: true
-        default: 'com.joker.app'
+        default: 'com.myapp.app'
         type: string
       app_color:
-        description: '🎨 لون خلفية الأيقونة'
+        description: '🎨 لون الأيقونة (#RRGGBB)'
         required: true
-        default: '#FF0000'
+        default: '#2196F3'
         type: string
       app_letter:
-        description: '🔤 حرف في منتصف الأيقونة'
+        description: '🔤 حرف الأيقونة'
         required: true
-        default: 'ج'
+        default: 'A'
         type: string
-      icon_file:
-        description: '🖼️ اسم ملف الأيقونة PNG'
+      source_folder:
+        description: '📁 مجلد المصدر (اتركه فارغاً للمجلد الرئيسي)'
         required: false
-        default: 'icon.png'
+        default: ''
         type: string
 
 permissions:
   contents: write
 
 jobs:
-  build-apk:
-    name: 📱 بناء تطبيق ${{ github.event.inputs.app_name }}
+  build:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: 📥 تحميل المشروع
-        uses: actions/checkout@v4
-
-      - name: ☕ تثبيت Java
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: 🟢 تثبيت Node.js
-        uses: actions/setup-node@v4
+          
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: 🔧 تثبيت الأدوات
+      - name: 📦 تثبيت الأدوات
         run: |
           npm install -g @capacitor/cli @capacitor/core @capacitor/android
-          sudo apt-get update
-          sudo apt-get install -y imagemagick xmlstarlet
 
-      - name: 📁 تجهيز ملفات الموقع للتضمين
+      - name: 📁 نسخ ملفات الموقع
         run: |
-          # إنشاء مجلد www
           mkdir -p www
           
-          # نسخ جميع ملفات الموقع
-          echo "📁 جاري نسخ ملفات الموقع..."
+          # تحديد مصدر الملفات
+          if [ -n "${{ github.event.inputs.source_folder }}" ] && [ -d "${{ github.event.inputs.source_folder }}" ]; then
+            echo "📁 نسخ من: ${{ github.event.inputs.source_folder }}"
+            cp -r ${{ github.event.inputs.source_folder }}/* www/
+          else
+            echo "📁 نسخ من المجلد الرئيسي"
+            # نسخ كل الملفات ما عدا النظامية
+            for file in *; do
+              if [ "$file" != "www" ] && [ "$file" != ".git" ] && [ "$file" != ".github" ] && [ "$file" != "node_modules" ] && [ "$file" != "android" ]; then
+                cp -r "$file" www/
+              fi
+            done
+          fi
           
-          # نسخ جميع الملفات ما عدا مجلدات النظام
-          find . -maxdepth 1 -not -name '.git' -not -name '.github' -not -name 'www' -not -name 'android' -not -name 'node_modules' -not -name '.' -not -name '..' -exec cp -r {} www/ \;
-          
-          # التأكد من وجود index.html
+          # إنشاء index.html إذا لم يوجد
           if [ ! -f "www/index.html" ]; then
-            echo "⚠️ لم يتم العثور على index.html"
-            echo "📄 جاري إنشاء صفحة افتراضية..."
-            cat > www/index.html << 'EOF'
+            cat > www/index.html << EOF
           <!DOCTYPE html>
           <html dir="rtl">
           <head>
@@ -81,57 +79,42 @@ jobs:
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
               <title>${{ github.event.inputs.app_name }}</title>
               <style>
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
                   body {
                       font-family: Arial, sans-serif;
                       display: flex;
                       justify-content: center;
                       align-items: center;
                       min-height: 100vh;
-                      margin: 0;
-                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      background: ${{ github.event.inputs.app_color }};
                       color: white;
                       text-align: center;
                   }
-                  .container {
-                      padding: 20px;
-                  }
-                  h1 {
-                      font-size: 3em;
-                      margin-bottom: 20px;
-                  }
-                  .status {
-                      background: rgba(255,255,255,0.2);
-                      padding: 15px 30px;
-                      border-radius: 50px;
-                      font-size: 1.2em;
-                  }
+                  h1 { font-size: 3em; margin-bottom: 20px; }
+                  p { font-size: 1.2em; opacity: 0.9; }
               </style>
           </head>
           <body>
-              <div class="container">
+              <div>
                   <h1>📱 ${{ github.event.inputs.app_name }}</h1>
-                  <div class="status">✅ يعمل بدون إنترنت</div>
+                  <p>✅ التطبيق يعمل محلياً</p>
               </div>
           </body>
           </html>
           EOF
           fi
           
-          # إزالة الملفات غير الضرورية
-          rm -rf www/.git www/.github www/node_modules www/package.json www/package-lock.json www/android www/ios 2>/dev/null || true
-          
-          echo "✅ تم تجهيز ملفات الموقع"
-          echo "📋 محتويات www:"
+          echo "✅ عدد الملفات: $(find www -type f | wc -l)"
+          echo "📋 المحتويات:"
           ls -la www/
-          echo "📊 عدد الملفات: $(find www -type f | wc -l)"
 
-      - name: 📄 إنشاء package.json
+      - name: ⚙️ إعداد Capacitor
         run: |
+          # package.json
           cat > package.json << EOF
           {
-            "name": "${{ github.event.inputs.app_name }}",
+            "name": "app",
             "version": "1.0.0",
-            "description": "تطبيق ${{ github.event.inputs.app_name }} - يعمل بدون إنترنت",
             "main": "www/index.html",
             "dependencies": {
               "@capacitor/android": "^6.0.0",
@@ -140,51 +123,90 @@ jobs:
             }
           }
           EOF
-
-      - name: ⚙️ إعداد Capacitor للتشغيل المحلي
-        run: |
-          cat > capacitor.config.json << 'EOF'
+          
+          # capacitor.config.json - الأهم: androidScheme: file للتشغيل المحلي
+          cat > capacitor.config.json << EOF
           {
             "appId": "${{ github.event.inputs.app_id }}",
             "appName": "${{ github.event.inputs.app_name }}",
             "webDir": "www",
             "bundledWebRuntime": false,
             "server": {
-              "androidScheme": "file",
-              "allowNavigation": ["*"]
+              "androidScheme": "file"
             },
             "android": {
               "allowMixedContent": true,
-              "webContentsDebuggingEnabled": false,
-              "useLegacyBridge": false
+              "webContentsDebuggingEnabled": false
             }
           }
           EOF
-          
-          # استبدال المتغيرات في الملف
-          sed -i "s|\${{ github.event.inputs.app_id }}|${{ github.event.inputs.app_id }}|g" capacitor.config.json
-          sed -i "s|\${{ github.event.inputs.app_name }}|${{ github.event.inputs.app_name }}|g" capacitor.config.json
 
-      - name: 📦 تثبيت المكتبات
-        run: npm install
-
-      - name: 🤖 إنشاء مشروع Android
+      - name: 📦 تثبيت وإنشاء Android
         run: |
+          npm install
           npx cap add android
-          echo "✅ تم إنشاء مشروع Android"
+
+      - name: 🔧 إعداد WebView للتحميل المحلي
+        run: |
+          # البحث عن MainActivity.java
+          MAIN_FILE=$(find android/app/src/main/java -name "MainActivity.java")
+          
+          if [ -f "$MAIN_FILE" ]; then
+            # إضافة import والإعدادات
+            cat > temp_main.java << 'JAVAEOF'
+          package com.getcapacitor.myapp;
+
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  
+                  // إعدادات التحميل المحلي
+                  WebView webView = getBridge().getWebView();
+                  WebSettings webSettings = webView.getSettings();
+                  
+                  // تمكين JavaScript
+                  webSettings.setJavaScriptEnabled(true);
+                  
+                  // تمكين التخزين المحلي
+                  webSettings.setDomStorageEnabled(true);
+                  webSettings.setDatabaseEnabled(true);
+                  
+                  // السماح بالوصول للملفات المحلية
+                  webSettings.setAllowFileAccess(true);
+                  webSettings.setAllowContentAccess(true);
+                  webSettings.setAllowFileAccessFromFileURLs(true);
+                  webSettings.setAllowUniversalAccessFromFileURLs(true);
+                  
+                  // دعم الفيديو والصوت
+                  webSettings.setMediaPlaybackRequiresUserGesture(false);
+                  
+                  // عرض كامل
+                  webSettings.setLoadWithOverviewMode(true);
+                  webSettings.setUseWideViewPort(true);
+                  
+                  // السماح بالمحتوى المختلط
+                  webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+              }
+          }
+          JAVAEOF
+            
+            # استبدال الملف
+            cp temp_main.java "$MAIN_FILE"
+            echo "✅ تم إعداد WebView للتحميل المحلي"
+          fi
 
       - name: 🎨 إنشاء الأيقونة
         run: |
-          # إنشاء مجلدات الأيقونات
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           
-          # خلفية الأيقونة
+          # الخلفية
           cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -192,42 +214,8 @@ jobs:
           </shape>
           EOF
           
-          ICON_FILE="${{ github.event.inputs.icon_file }}"
-          
-          # استخدام الصورة إذا وجدت
-          if [ -f "$ICON_FILE" ] && [ "$ICON_FILE" != "" ]; then
-            echo "🖼️ استخدام صورة الأيقونة: $ICON_FILE"
-            
-            # حفظ الصورة الأصلية
-            cp "$ICON_FILE" android/app/src/main/res/drawable/icon_original.png
-            
-            # إنشاء foreground مع الصورة
-            cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <item
-                  android:width="108dp"
-                  android:height="108dp"
-                  android:gravity="center">
-                  <bitmap
-                      android:src="@drawable/icon_original"
-                      android:gravity="center"
-                      android:filter="true"/>
-              </item>
-          </layer-list>
-          EOF
-            
-            # إنشاء أيقونات بأحجام مختلفة
-            convert "$ICON_FILE" -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert "$ICON_FILE" -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert "$ICON_FILE" -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert "$ICON_FILE" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert "$ICON_FILE" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          else
-            echo "🔤 استخدام حرف: ${{ github.event.inputs.app_letter }}"
-            
-            # إنشاء foreground مع حرف
-            cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
+          # الحرف في المنتصف
+          cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="108dp"
@@ -245,9 +233,8 @@ jobs:
                   android:y="72dp"/>
           </vector>
           EOF
-          fi
           
-          # ملف الأيقونة التكيفية
+          # أيقونة متكيفة
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -256,108 +243,55 @@ jobs:
           </adaptive-icon>
           EOF
           
-          echo "✅ تم إنشاء أيقونة التطبيق"
+          echo "✅ تم إنشاء الأيقونة"
 
       - name: 🎨 تخصيص التطبيق
         run: |
-          # اسم التطبيق
           mkdir -p android/app/src/main/res/values
-          cat > android/app/src/main/res/values/strings.xml << EOF
-          <?xml version='1.0' encoding='utf-8'?>
-          <resources>
-              <string name="app_name">${{ github.event.inputs.app_name }}</string>
-              <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
-          </resources>
-          EOF
           
-          # الثيم
-          cat > android/app/src/main/res/values/styles.xml << EOF
+          # اسم التطبيق
+          cat > android/app/src/main/res/values/strings.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                  <item name="colorPrimary">${{ github.event.inputs.app_color }}</item>
-                  <item name="colorPrimaryDark">${{ github.event.inputs.app_color }}</item>
-                  <item name="colorAccent">${{ github.event.inputs.app_color }}</item>
-                  <item name="android:windowBackground">${{ github.event.inputs.app_color }}</item>
-              </style>
+              <string name="app_name">${{ github.event.inputs.app_name }}</string>
           </resources>
           EOF
 
-      - name: 🔧 إعداد ملف AndroidManifest
+      - name: 🔧 صلاحيات Android
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           
-          # التأكد من وجود الصلاحيات
-          if ! grep -q "INTERNET" "$MANIFEST"; then
-            sed -i 's|</manifest>|    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n</manifest>|' "$MANIFEST"
-          fi
+          # إضافة الصلاحيات
+          sed -i '/<application/i \
+    <uses-permission android:name="android.permission.INTERNET"/>\
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>' "$MANIFEST"
           
-          # السماح بـ cleartext traffic
-          sed -i 's|android:usesCleartextTraffic="false"|android:usesCleartextTraffic="true"|' "$MANIFEST" 2>/dev/null || true
+          # السماح بـ HTTP
+          sed -i 's|android:usesCleartextTraffic="false"|android:usesCleartextTraffic="true"|' "$MANIFEST"
           
-          # إضافة صلاحية التخزين
-          if ! grep -q "READ_EXTERNAL_STORAGE" "$MANIFEST"; then
-            sed -i 's|</manifest>|    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>\n</manifest>|' "$MANIFEST"
-          fi
-          
-          echo "✅ تم إعداد AndroidManifest"
+          echo "✅ تم إضافة الصلاحيات"
 
-      - name: 🔧 تعديل MainActivity للتشغيل المحلي
-        run: |
-          MAIN_ACTIVITY="android/app/src/main/java/**/MainActivity.java"
-          
-          # العثور على الملف
-          MAIN_FILE=$(find android/app/src/main/java -name "MainActivity.java" -type f)
-          
-          if [ -f "$MAIN_FILE" ]; then
-            # إضافة إعدادات WebView للتشغيل المحلي
-            sed -i 's|import com.getcapacitor.BridgeActivity;|import com.getcapacitor.BridgeActivity;\nimport android.webkit.WebView;\nimport android.webkit.WebSettings;\nimport android.os.Bundle;|' "$MAIN_FILE"
-            
-            # إضافة إعدادات في onCreate
-            sed -i 's|public class MainActivity extends BridgeActivity {|public class MainActivity extends BridgeActivity {\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        \n        // تمكين JavaScript\n        WebView webView = getBridge().getWebView();\n        WebSettings webSettings = webView.getSettings();\n        webSettings.setJavaScriptEnabled(true);\n        webSettings.setDomStorageEnabled(true);\n        webSettings.setAllowFileAccess(true);\n        webSettings.setAllowContentAccess(true);\n        webSettings.setAllowFileAccessFromFileURLs(true);\n        webSettings.setAllowUniversalAccessFromFileURLs(true);\n        \n        // تحميل الملفات المحلية\n        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);\n    }|' "$MAIN_FILE"
-            
-            echo "✅ تم تعديل MainActivity"
-          fi
-
-      - name: 🔄 مزامنة المشروع
-        run: |
-          npx cap sync android
-          echo "✅ تمت مزامنة الملفات مع Android"
+      - name: 🔄 مزامنة
+        run: npx cap sync android
 
       - name: 🔨 بناء APK
         run: |
           cd android
           chmod +x gradlew
-          
-          # بناء التطبيق
-          ./gradlew assembleDebug --warning-mode all
-          
-          echo "✅ تم بناء APK"
-
-      - name: 📊 التحقق من الملف الناتج
-        run: |
-          APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
-          
-          if [ -f "$APK_PATH" ]; then
-            echo "🎉 تم بناء APK بنجاح!"
-            echo "📱 اسم التطبيق: ${{ github.event.inputs.app_name }}"
-            echo "🆔 App ID: ${{ github.event.inputs.app_id }}"
-            echo "📦 حجم الملف: $(du -h $APK_PATH | cut -f1)"
-            echo "✅ التطبيق يعمل بدون إنترنت"
-          else
-            echo "❌ فشل بناء APK"
-            exit 1
-          fi
+          ./gradlew assembleDebug
 
       - name: 📤 رفع APK
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.inputs.app_name }}-Offline-APK
+          name: ${{ github.event.inputs.app_name }}-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 90
 
-      - name: 🎊 اكتمال
+      - name: ✅ اكتمال
         run: |
-          echo "🎊 تم بناء تطبيق ${{ github.event.inputs.app_name }} بنجاح!"
-          echo "📱 التطبيق يعمل بالكامل بدون إنترنت"
-          echo "📥 حمّل الـ APK من قسم Artifacts"
+          echo "🎉 تم بناء التطبيق بنجاح!"
+          echo "📱 الاسم: ${{ github.event.inputs.app_name }}"
+          echo "🆔 App ID: ${{ github.event.inputs.app_id }}"
+          echo "✅ التطبيق يعمل محلياً - جميع الملفات مخزنة داخل APK"
