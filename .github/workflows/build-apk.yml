@@ -14,7 +14,7 @@ on:
         default: 'com.joker.app'
         type: string
       app_color:
-        description: '🎨 لون خلفية الأيقونة (مثال: #FF0000)'
+        description: '🎨 لون خلفية التطبيق (مثال: #FF0000)'
         required: true
         default: '#FF0000'
         type: string
@@ -27,6 +27,11 @@ on:
         description: '📁 مجلد موقع الويب (اتركه فارغاً للمجلد الرئيسي)'
         required: false
         default: ''
+        type: string
+      splash_duration:
+        description: '⏱️ مدة شاشة البداية (بالمللي ثانية)'
+        required: false
+        default: '3000'
         type: string
 
 permissions:
@@ -64,9 +69,14 @@ jobs:
         run: |
           echo "🔍 جاري سحب جميع ملفات المشروع..."
           
-          # عرض جميع الملفات الموجودة
+          # عرض جميع الملفات الموجودة في المشروع
           echo "📋 جميع الملفات في المشروع:"
           find . -type f -not -path './.git/*' -not -path './node_modules/*' | sort
+          
+          # عرض المجلدات
+          echo ""
+          echo "📂 المجلدات الموجودة:"
+          find . -type d -not -path './.git/*' -not -path './node_modules/*' | sort
           
           # إنشاء مجلد www
           rm -rf www
@@ -78,6 +88,7 @@ jobs:
             SOURCE_DIR="."
           fi
           
+          echo ""
           echo "📁 جاري نسخ الملفات من: $SOURCE_DIR"
           
           # نسخ جميع الملفات والمجلدات
@@ -93,8 +104,22 @@ jobs:
             done
           else
             # نسخ من مجلد محدد
-            cp -r "$SOURCE_DIR"/* www/ 2>/dev/null || true
-            cp -r "$SOURCE_DIR"/.* www/ 2>/dev/null || true
+            if [ -d "$SOURCE_DIR" ]; then
+              echo "  ✅ المجلد $SOURCE_DIR موجود"
+              cp -r "$SOURCE_DIR"/* www/ 2>/dev/null || true
+              cp -r "$SOURCE_DIR"/.* www/ 2>/dev/null || true
+            else
+              echo "  ❌ المجلد $SOURCE_DIR غير موجود!"
+              echo "  سيتم نسخ جميع الملفات من المجلد الرئيسي"
+              shopt -s dotglob
+              for item in ./*; do
+                basename=$(basename "$item")
+                if [ "$basename" != ".git" ] && [ "$basename" != ".github" ] && [ "$basename" != "node_modules" ] && [ "$basename" != "android" ] && [ "$basename" != "ios" ] && [ "$basename" != "www" ] && [ "$basename" != "package.json" ] && [ "$basename" != "package-lock.json" ] && [ "$basename" != "capacitor.config.json" ]; then
+                  echo "  📄 نسخ: $basename"
+                  cp -r "$item" www/ 2>/dev/null || true
+                fi
+              done
+            fi
           fi
           
           # حذف أي ملفات غير مرغوب فيها داخل www
@@ -105,15 +130,22 @@ jobs:
           
           echo ""
           echo "✅ تم نسخ جميع ملفات الموقع"
+          echo ""
           echo "📊 إحصائيات مجلد www:"
           echo "  📁 عدد الملفات: $(find www -type f | wc -l)"
           echo "  📂 عدد المجلدات: $(find www -type d | wc -l)"
           echo "  💾 الحجم الإجمالي: $(du -sh www | cut -f1)"
-          echo ""
-          echo "📋 محتويات مجلد www:"
-          find www -type f -not -path '*/\.*' | sort | while read file; do
-            echo "  📄 ${file#www/} ($(du -h "$file" | cut -f1))"
-          done
+          
+          # التحقق من وجود index.html
+          if [ -f "www/index.html" ]; then
+            echo ""
+            echo "✅ تم العثور على index.html"
+          else
+            echo ""
+            echo "⚠️ تحذير: لم يتم العثور على index.html!"
+            echo "🔍 البحث عن أي ملف HTML في www:"
+            find www -name "*.html" -type f
+          fi
 
       - name: 📄 إنشاء package.json
         run: |
@@ -138,7 +170,7 @@ jobs:
           }
           EOF
 
-      - name: ⚙️ إعداد Capacitor
+      - name: ⚙️ إعداد Capacitor مع Splash Screen
         run: |
           cat > capacitor.config.json << EOF
           {
@@ -158,8 +190,20 @@ jobs:
             },
             "plugins": {
               "SplashScreen": {
-                "launchShowDuration": 2000,
-                "backgroundColor": "${{ github.event.inputs.app_color }}"
+                "launchShowDuration": ${{ github.event.inputs.splash_duration }},
+                "launchAutoHide": true,
+                "launchFadeOutDuration": 500,
+                "backgroundColor": "${{ github.event.inputs.app_color }}",
+                "androidSplashResourceName": "splash",
+                "androidScaleType": "FIT_CENTER",
+                "showSpinner": false,
+                "splashFullScreen": true,
+                "splashImmersive": true
+              },
+              "StatusBar": {
+                "style": "DARK",
+                "backgroundColor": "${{ github.event.inputs.app_color }}",
+                "overlaysWebView": false
               }
             }
           }
@@ -243,6 +287,103 @@ jobs:
           echo ""
           echo "✅ تم إنشاء جميع الأيقونات بنجاح!"
 
+      - name: 🎨 إنشاء Splash Screen مخصصة (بدون إطار)
+        run: |
+          ICON_FILE="${{ github.event.inputs.icon_file }}"
+          APP_COLOR="${{ github.event.inputs.app_color }}"
+          
+          echo "🎨 جاري إنشاء Splash Screen بدون إطار..."
+          
+          # إنشاء مجلد drawable إذا لم يكن موجوداً
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/values
+          
+          # إنشاء Splash Screen - صورة كاملة بدون أي إطار أو حدود
+          # استخدام خلفية شفافة للأيقونة ودمجها مع لون الخلفية
+          convert $ICON_FILE -resize 250x250 -background none -gravity center -extent 300x300 \
+                  \( +clone -background "$APP_COLOR" -shadow 0x0+0+0 \) \
+                  +swap -background "$APP_COLOR" -layers merge +repage \
+                  android/app/src/main/res/drawable/splash.png
+          
+          echo "  ✅ تم إنشاء splash.png بدون إطار"
+          
+          # إنشاء خلفية Splash Screen - بسيطة ونظيفة بدون أي إطار
+          cat > android/app/src/main/res/drawable/splash_background.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item>
+                  <shape>
+                      <solid android:color="${APP_COLOR}" />
+                  </shape>
+              </item>
+              <item
+                  android:gravity="center"
+                  android:width="250dp"
+                  android:height="250dp">
+                  <bitmap
+                      android:src="@drawable/splash"
+                      android:gravity="center"
+                      android:filter="true" />
+              </item>
+          </layer-list>
+          EOF
+          echo "  ✅ تم إنشاء splash_background.xml بدون إطار"
+          
+          # إنشاء ملف styles.xml مع Splash Screen Theme محسن
+          cat > android/app/src/main/res/values/styles.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <!-- السمة الرئيسية للتطبيق -->
+              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+                  <item name="colorPrimary">${APP_COLOR}</item>
+                  <item name="colorPrimaryDark">${APP_COLOR}</item>
+                  <item name="colorAccent">${APP_COLOR}</item>
+                  <item name="android:statusBarColor">${APP_COLOR}</item>
+                  <item name="android:navigationBarColor">${APP_COLOR}</item>
+                  <item name="android:windowBackground">@color/windowBackground</item>
+              </style>
+              
+              <!-- سمة Splash Screen بدون أي إطارات -->
+              <style name="AppTheme.Splash" parent="AppTheme">
+                  <item name="android:windowBackground">@drawable/splash_background</item>
+                  <item name="android:statusBarColor">${APP_COLOR}</item>
+                  <item name="android:navigationBarColor">${APP_COLOR}</item>
+                  <item name="android:windowFullscreen">true</item>
+                  <item name="android:windowContentOverlay">@null</item>
+                  <item name="android:backgroundDimEnabled">false</item>
+              </style>
+              
+              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+                  <item name="android:background">${APP_COLOR}</item>
+              </style>
+          </resources>
+          EOF
+          echo "  ✅ تم إنشاء styles.xml محسن"
+          
+          # إنشاء ملف colors.xml
+          cat > android/app/src/main/res/values/colors.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="windowBackground">${APP_COLOR}</color>
+              <color name="primaryColor">${APP_COLOR}</color>
+          </resources>
+          EOF
+          echo "  ✅ تم إنشاء colors.xml"
+          
+          # إنشاء strings.xml
+          cat > android/app/src/main/res/values/strings.xml << EOF
+          <?xml version='1.0' encoding='utf-8'?>
+          <resources>
+              <string name="app_name">${{ github.event.inputs.app_name }}</string>
+              <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
+              <string name="package_name">${{ github.event.inputs.app_id }}</string>
+          </resources>
+          EOF
+          echo "  ✅ تم إنشاء strings.xml"
+          
+          echo ""
+          echo "✨ تم إنشاء Splash Screen نظيفة بدون أي إطارات!"
+
       - name: 🎨 إنشاء الأيقونة التكيفية (لأندرويد 8+)
         run: |
           # إنشاء خلفية الأيقونة
@@ -273,58 +414,34 @@ jobs:
           
           echo "✅ تم إنشاء الأيقونة التكيفية لأندرويد 8+"
 
-      - name: 🎨 تخصيص تطبيق Android
-        run: |
-          # تخصيص اسم التطبيق
-          mkdir -p android/app/src/main/res/values
-          cat > android/app/src/main/res/values/strings.xml << EOF
-          <?xml version='1.0' encoding='utf-8'?>
-          <resources>
-              <string name="app_name">${{ github.event.inputs.app_name }}</string>
-              <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
-              <string name="package_name">${{ github.event.inputs.app_id }}</string>
-          </resources>
-          EOF
-          
-          # إنشاء ملف themes
-          cat > android/app/src/main/res/values/styles.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                  <item name="colorPrimary">${{ github.event.inputs.app_color }}</item>
-                  <item name="colorPrimaryDark">${{ github.event.inputs.app_color }}</item>
-                  <item name="colorAccent">${{ github.event.inputs.app_color }}</item>
-              </style>
-              
-              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
-                  <item name="android:background">${{ github.event.inputs.app_color }}</item>
-              </style>
-          </resources>
-          EOF
-          
-          echo "✅ تم تخصيص مظهر التطبيق"
-
-      - name: 🔧 إعداد ملف AndroidManifest.xml
+      - name: 🔧 إعداد ملف AndroidManifest.xml مع Splash Screen
         run: |
           MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
           
           if [ -f "$MANIFEST_FILE" ]; then
             echo "📝 جاري تعديل AndroidManifest.xml..."
             
-            # قراءة المحتوى الحالي
-            cat $MANIFEST_FILE
-            
             # إنشاء نسخة احتياطية
             cp $MANIFEST_FILE ${MANIFEST_FILE}.backup
             
-            # إزالة أي إعدادات android:networkSecurityConfig موجودة مسبقاً
+            # إزالة أي إعدادات قديمة
             sed -i 's/android:networkSecurityConfig="[^"]*"//g' $MANIFEST_FILE
             sed -i 's/android:usesCleartextTraffic="[^"]*"//g' $MANIFEST_FILE
             sed -i 's/android:hardwareAccelerated="[^"]*"//g' $MANIFEST_FILE
+            sed -i 's/android:theme="[^"]*"//g' $MANIFEST_FILE
             
-            # تعديل وسم application
-            sed -i 's|<application|<application android:usesCleartextTraffic="true" android:hardwareAccelerated="true"|' $MANIFEST_FILE
+            # تعديل وسم application مع Theme Splash
+            sed -i 's|<application|<application android:usesCleartextTraffic="true" android:hardwareAccelerated="true" android:theme="@style/AppTheme.Splash"|' $MANIFEST_FILE
             
+            # إضافة uses-permission للأذونات
+            if ! grep -q "INTERNET" $MANIFEST_FILE; then
+              sed -i 's|</manifest>|    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n</manifest>|' $MANIFEST_FILE
+            fi
+            
+            echo "📋 محتوى AndroidManifest.xml النهائي:"
+            cat $MANIFEST_FILE
+            
+            echo ""
             echo "✅ تم تعديل AndroidManifest.xml"
           else
             echo "❌ ملف AndroidManifest.xml غير موجود!"
@@ -332,7 +449,28 @@ jobs:
           fi
 
       - name: 🔄 مزامنة المشروع
-        run: npx cap sync android
+        run: |
+          echo "🔄 جاري مزامنة الملفات..."
+          npx cap sync android
+          
+          # التحقق من وجود splash
+          echo ""
+          echo "🔍 التحقق من ملفات Splash Screen:"
+          if [ -f "android/app/src/main/res/drawable/splash.png" ]; then
+            echo "  ✅ splash.png موجودة"
+            echo "  📏 أبعاد الصورة: $(identify -format '%wx%h' android/app/src/main/res/drawable/splash.png)"
+          fi
+          if [ -f "android/app/src/main/res/drawable/splash_background.xml" ]; then
+            echo "  ✅ splash_background.xml موجود"
+          fi
+          
+          # التحقق من assets
+          echo ""
+          echo "📂 التحقق من ملفات assets:"
+          if [ -d "android/app/src/main/assets" ]; then
+            echo "  💾 عدد الملفات: $(find android/app/src/main/assets -type f | wc -l)"
+            echo "  💾 الحجم: $(du -sh android/app/src/main/assets | cut -f1)"
+          fi
 
       - name: 🔨 بناء تطبيق APK
         run: |
@@ -348,11 +486,13 @@ jobs:
             echo "📱 حجم الملف: $(du -h $APK_PATH | cut -f1)"
             echo "📋 اسم التطبيق: ${{ github.event.inputs.app_name }}"
             echo "🆔 App ID: ${{ github.event.inputs.app_id }}"
+            echo "🎨 لون الخلفية: ${{ github.event.inputs.app_color }}"
+            echo "⏱️ مدة Splash: ${{ github.event.inputs.splash_duration }} مللي ثانية"
             echo ""
-            echo "📊 إحصائيات الأيقونات المضمنة:"
-            find android/app/src/main/res -name "ic_launcher*" -type f | while read icon; do
-              echo "  🎨 ${icon#android/app/src/main/res/} ($(du -h "$icon" | cut -f1))"
-            done
+            echo "🎨 تم بناء Splash Screen بدون إطارات ✨"
+            echo ""
+            echo "📦 محتويات APK من ملفات splash:"
+            unzip -l $APK_PATH | grep -E "splash|ic_launcher|colors" || echo "  جاري الفحص..."
           else
             echo "❌ فشل بناء APK"
             exit 1
@@ -367,12 +507,21 @@ jobs:
 
       - name: 🎉 اكتمال البناء
         run: |
-          echo "🎊 تم بناء تطبيق ${{ github.event.inputs.app_name }} بنجاح!"
-          echo "📱 يمكنك تحميل الـ APK من قسم Artifacts"
+          echo "╔════════════════════════════════════════╗"
+          echo "║  🎊 تم بناء التطبيق بنجاح!           ║"
+          echo "║  ✨ Splash Screen بدون إطارات        ║"
+          echo "╚════════════════════════════════════════╝"
           echo ""
-          echo "📋 ملخص الأيقونات التي تم إنشاؤها:"
-          echo "  📱 أيقونات التطبيق: 6 مقاسات (ldpi → xxxhdpi)"
-          echo "  🔔 أيقونات الإشعارات: 6 مقاسات (ldpi → xxxhdpi)"
-          echo "  🎯 أيقونة تكيفية: لأندرويد 8+"
-          echo "  ⭕ أيقونة دائرية: للشاشات المستديرة"
-          echo "  ⬜ أيقونة مربعة: للإشعارات"
+          echo "📱 اسم التطبيق: ${{ github.event.inputs.app_name }}"
+          echo "🎨 لون الخلفية: ${{ github.event.inputs.app_color }}"
+          echo "⏱️ مدة شاشة البداية: ${{ github.event.inputs.splash_duration }}ms"
+          echo ""
+          echo "✨ المميزات:"
+          echo "  🎨 شاشة بداية بدون أي إطارات أو حدود"
+          echo "  🖼️ أيقونة في المنتصف بخلفية موحدة"
+          echo "  📱 أيقونات بجميع المقاسات"
+          echo "  🎯 أيقونة تكيفية لأندرويد 8+"
+          echo "  ⭕ أيقونة دائرية للشاشات المستديرة"
+          echo "  🎭 شريط حالة مخصص بنفس لون التطبيق"
+          echo ""
+          echo "📥 يمكنك تحميل الـ APK من قسم Artifacts"
