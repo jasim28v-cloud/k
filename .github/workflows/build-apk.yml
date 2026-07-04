@@ -24,7 +24,7 @@ on:
           - 'com.green.emerald'
           - 'com.flare.orange'
       app_color:
-        description: '🎨 لون الخلفية (يُستخدم عند توليد الأيقونة)'
+        description: '🎨 لون الأيقونة'
         required: true
         default: '#ea580c'
         type: choice
@@ -34,7 +34,7 @@ on:
           - '#059669'
           - '#ea580c'
       app_letter:
-        description: '🔤 حرف الأيقونة (يُستخدم عند توليد الأيقونة)'
+        description: '🔤 حرف الأيقونة'
         required: true
         default: 'F'
         type: choice
@@ -43,17 +43,6 @@ on:
           - 'V'
           - 'G'
           - 'F'
-      icon_source:
-        description: '🖼️ مصدر الأيقونة'
-        required: true
-        default: 'generate'
-        type: choice
-        options:
-          - 'generate'
-          - 'icons/legacy.png'
-          - 'icons/violet.png'
-          - 'icons/green.png'
-          - 'icons/flare.png'
 
 permissions:
   contents: write
@@ -66,8 +55,6 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true   # للتمكن من commit لاحقاً
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
@@ -126,7 +113,7 @@ jobs:
       - name: 🤖 Add Android Platform
         run: npx cap add android
 
-      - name: 🎨 Generate or Copy Icon
+      - name: 🎨 Set App Icon
         id: icon
         run: |
           mkdir -p android/app/src/main/res/drawable
@@ -134,34 +121,23 @@ jobs:
           mkdir -p android/app/src/main/res/values
           mkdir -p icons
 
-          ICON_SOURCE="${{ github.event.inputs.icon_source }}"
+          APP_NAME="${{ github.event.inputs.app_name }}"
           APP_COLOR="${{ github.event.inputs.app_color }}"
           APP_LETTER="${{ github.event.inputs.app_letter }}"
+          ICON_PATH="icons/${APP_NAME}.png"
 
-          if [[ "$ICON_SOURCE" == "generate" ]]; then
+          if [ -f "$ICON_PATH" ]; then
+            cp "$ICON_PATH" android/app/src/main/res/drawable/ic_launcher_foreground.png
+            echo "✅ تم استخدام الأيقونة من: $ICON_PATH"
+          else
+            echo "⚠️ الأيقونة $ICON_PATH غير موجودة، جاري توليد أيقونة افتراضية..."
             sudo apt-get update -qq && sudo apt-get install -y imagemagick
             convert -size 1024x1024 xc:"$APP_COLOR" -gravity center -fill white \
               -font Helvetica -pointsize 500 -annotate 0 "$APP_LETTER" \
               android/app/src/main/res/drawable/ic_launcher_foreground.png
-            echo "✅ Generated icon with letter $APP_LETTER on $APP_COLOR"
-          else
-            if [ -f "$ICON_SOURCE" ]; then
-              cp "$ICON_SOURCE" android/app/src/main/res/drawable/ic_launcher_foreground.png
-              echo "✅ Copied custom icon from $ICON_SOURCE"
-            else
-              echo "⚠️ Custom icon not found, generating default"
-              sudo apt-get update -qq && sudo apt-get install -y imagemagick
-              convert -size 1024x1024 xc:"$APP_COLOR" -gravity center -fill white \
-                -font Helvetica -pointsize 500 -annotate 0 "$APP_LETTER" \
-                android/app/src/main/res/drawable/ic_launcher_foreground.png
-            fi
+            echo "✅ تم توليد أيقونة بالحرف $APP_LETTER ولون $APP_COLOR"
           fi
 
-          # حفظ نسخة في مجلد icons/ لرفعها للمستودع
-          cp android/app/src/main/res/drawable/ic_launcher_foreground.png icons/${{ github.event.inputs.app_name }}.png
-          echo "💾 Saved icon to icons/${{ github.event.inputs.app_name }}.png"
-
-          # خلفية بيضاء للأيقونة التكيفية
           cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -169,7 +145,6 @@ jobs:
           </shape>
           EOF
 
-          # ملف الأيقونة التكيفية
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -178,7 +153,6 @@ jobs:
           </adaptive-icon>
           EOF
 
-          # مورد اللون للخلفية (اختياري)
           cat > android/app/src/main/res/values/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
@@ -186,13 +160,7 @@ jobs:
           </resources>
           EOF
 
-      - name: 🚀 Upload icon to repository
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "🏷️ Add/Update icon for ${{ github.event.inputs.app_name }}"
-          file_pattern: icons/*
-          commit_user_name: github-actions[bot]
-          commit_user_email: github-actions[bot]@users.noreply.github.com
+          echo "✅ أيقونة $APP_NAME جاهزة!"
 
       - name: 🎨 Customize Android Strings
         run: |
