@@ -38,8 +38,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 تحميل المشروع
+      - name: 📥 تحميل المشروع بالكامل
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # سحب كل الملفات والتاريخ
 
       - name: ☕ تثبيت Java
         uses: actions/setup-java@v4
@@ -58,9 +60,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y imagemagick
 
-      - name: 📁 تجهيز ملفات الموقع
+      - name: 📁 سحب وتجهيز جميع ملفات الموقع
         run: |
+          echo "🔍 جاري سحب جميع ملفات المشروع..."
+          
+          # عرض جميع الملفات الموجودة
+          echo "📋 جميع الملفات في المشروع:"
+          find . -type f -not -path './.git/*' -not -path './node_modules/*' | sort
+          
           # إنشاء مجلد www
+          rm -rf www
           mkdir -p www
           
           # تحديد مجلد المصدر
@@ -69,21 +78,42 @@ jobs:
             SOURCE_DIR="."
           fi
           
-          # نسخ جميع ملفات الموقع
           echo "📁 جاري نسخ الملفات من: $SOURCE_DIR"
-          cp -r $SOURCE_DIR/* www/ 2>/dev/null || true
           
-          # نسخ الملفات المخفية إذا وجدت
-          cp -r $SOURCE_DIR/.* www/ 2>/dev/null || true
+          # نسخ جميع الملفات والمجلدات
+          if [ "$SOURCE_DIR" = "." ]; then
+            # نسخ كل شيء ما عدا المجلدات المستثناة
+            shopt -s dotglob
+            for item in "$SOURCE_DIR"/*; do
+              basename=$(basename "$item")
+              if [ "$basename" != ".git" ] && [ "$basename" != ".github" ] && [ "$basename" != "node_modules" ] && [ "$basename" != "android" ] && [ "$basename" != "ios" ] && [ "$basename" != "www" ] && [ "$basename" != "package.json" ] && [ "$basename" != "package-lock.json" ] && [ "$basename" != "capacitor.config.json" ]; then
+                echo "  📄 نسخ: $basename"
+                cp -r "$item" www/ 2>/dev/null || true
+              fi
+            done
+          else
+            # نسخ من مجلد محدد
+            cp -r "$SOURCE_DIR"/* www/ 2>/dev/null || true
+            cp -r "$SOURCE_DIR"/.* www/ 2>/dev/null || true
+          fi
           
-          # حذف الملفات غير المرغوب فيها
+          # حذف أي ملفات غير مرغوب فيها داخل www
           rm -rf www/.git www/.github www/node_modules www/.gitignore 2>/dev/null || true
           rm -rf www/package.json www/package-lock.json 2>/dev/null || true
-          rm -rf www/android www/ios 2>/dev/null || true
+          rm -rf www/android www/ios www/capacitor.config.json 2>/dev/null || true
+          rm -rf www/icon.png www/icon.jpg www/icon.jpeg 2>/dev/null || true
           
+          echo ""
           echo "✅ تم نسخ جميع ملفات الموقع"
+          echo "📊 إحصائيات مجلد www:"
+          echo "  📁 عدد الملفات: $(find www -type f | wc -l)"
+          echo "  📂 عدد المجلدات: $(find www -type d | wc -l)"
+          echo "  💾 الحجم الإجمالي: $(du -sh www | cut -f1)"
+          echo ""
           echo "📋 محتويات مجلد www:"
-          ls -la www/
+          find www -type f -not -path '*/\.*' | sort | while read file; do
+            echo "  📄 ${file#www/} ($(du -h "$file" | cut -f1))"
+          done
 
       - name: 📄 إنشاء package.json
         run: |
@@ -141,50 +171,80 @@ jobs:
       - name: 🤖 إنشاء مشروع Android
         run: npx cap add android
 
-      - name: 🎨 تجهيز الأيقونة المخصصة
+      - name: 🎨 إنشاء الأيقونات بجميع المقاسات
         run: |
           ICON_FILE="${{ github.event.inputs.icon_file }}"
           
+          # التحقق من وجود ملف الأيقونة
           if [ ! -f "$ICON_FILE" ]; then
             echo "❌ خطأ: ملف الأيقونة $ICON_FILE غير موجود!"
-            echo "📁 الملفات الموجودة في المجلد:"
-            ls -la
+            echo "📁 البحث عن ملفات PNG في المشروع:"
+            find . -name "*.png" -not -path './node_modules/*' -not -path './.git/*'
             exit 1
           fi
           
           echo "✅ تم العثور على ملف الأيقونة: $ICON_FILE"
+          echo "📏 حجم الصورة الأصلي: $(identify -format '%wx%h' $ICON_FILE)"
+          echo ""
           
-          # حذف الأيقونات الافتراضية
+          # حذف الأيقونات القديمة
           rm -rf android/app/src/main/res/mipmap-*
           rm -rf android/app/src/main/res/drawable/ic_launcher_*
+          rm -rf android/app/src/main/res/drawable-*
           
-          # إنشاء مجلدات الأيقونات من جديد
-          mkdir -p android/app/src/main/res/mipmap-hdpi
+          # إنشاء جميع مجلدات المقاسات
+          mkdir -p android/app/src/main/res/mipmap-ldpi
           mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
           mkdir -p android/app/src/main/res/mipmap-xxhdpi
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/drawable-ldpi
+          mkdir -p android/app/src/main/res/drawable-mdpi
+          mkdir -p android/app/src/main/res/drawable-hdpi
+          mkdir -p android/app/src/main/res/drawable-xhdpi
+          mkdir -p android/app/src/main/res/drawable-xxhdpi
+          mkdir -p android/app/src/main/res/drawable-xxxhdpi
           
-          # تحويل الصورة لأحجام مختلفة للـ mipmap (الأيقونة العادية)
-          convert $ICON_FILE -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert $ICON_FILE -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert $ICON_FILE -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert $ICON_FILE -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert $ICON_FILE -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          echo "🎨 جاري إنشاء الأيقونات بجميع المقاسات..."
+          echo ""
           
-          echo "✅ تم إنشاء الأيقونات بأحجام مختلفة"
+          # إنشاء الأيقونات بجميع المقاسات للـ mipmap
+          echo "📱 أيقونات mipmap (للتطبيق):"
+          convert $ICON_FILE -resize 36x36   android/app/src/main/res/mipmap-ldpi/ic_launcher.png   && echo "  ✅ ldpi:    36x36"
+          convert $ICON_FILE -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png   && echo "  ✅ mdpi:    48x48"
+          convert $ICON_FILE -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png   && echo "  ✅ hdpi:    72x72"
+          convert $ICON_FILE -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png  && echo "  ✅ xhdpi:   96x96"
+          convert $ICON_FILE -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png && echo "  ✅ xxhdpi: 144x144"
+          convert $ICON_FILE -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png && echo "  ✅ xxxhdpi:192x192"
+          
+          echo ""
+          echo "🔧 أيقونات drawable (للإشعارات والأماكن الأخرى):"
+          convert $ICON_FILE -resize 18x18   android/app/src/main/res/drawable-ldpi/ic_launcher.png   && echo "  ✅ ldpi:    18x18"
+          convert $ICON_FILE -resize 24x24   android/app/src/main/res/drawable-mdpi/ic_launcher.png   && echo "  ✅ mdpi:    24x24"
+          convert $ICON_FILE -resize 36x36   android/app/src/main/res/drawable-hdpi/ic_launcher.png   && echo "  ✅ hdpi:    36x36"
+          convert $ICON_FILE -resize 48x48   android/app/src/main/res/drawable-xhdpi/ic_launcher.png  && echo "  ✅ xhdpi:   48x48"
+          convert $ICON_FILE -resize 72x72   android/app/src/main/res/drawable-xxhdpi/ic_launcher.png && echo "  ✅ xxhdpi:  72x72"
+          convert $ICON_FILE -resize 96x96   android/app/src/main/res/drawable-xxxhdpi/ic_launcher.png && echo "  ✅ xxxhdpi: 96x96"
+          
+          echo ""
+          echo "🎯 أيقونات إضافية:"
+          # نسخ الصورة الأصلية للـ foreground
+          cp $ICON_FILE android/app/src/main/res/drawable/ic_launcher_foreground.png && echo "  ✅ Foreground"
+          
+          # إنشاء أيقونة مربعة للإشعارات
+          convert $ICON_FILE -resize 72x72 -background none -gravity center -extent 72x72 android/app/src/main/res/drawable/ic_launcher_square.png && echo "  ✅ Square icon"
+          
+          # إنشاء أيقونة دائرية
+          convert $ICON_FILE -resize 72x72 \( +clone -threshold -1 -draw 'circle 36,36 36,0' \) -alpha off -compose CopyOpacity -composite android/app/src/main/res/drawable/ic_launcher_round.png && echo "  ✅ Round icon"
+          
+          echo ""
+          echo "✅ تم إنشاء جميع الأيقونات بنجاح!"
 
       - name: 🎨 إنشاء الأيقونة التكيفية (لأندرويد 8+)
         run: |
-          ICON_FILE="${{ github.event.inputs.icon_file }}"
-          
-          # إنشاء مجلد drawable
-          mkdir -p android/app/src/main/res/drawable
-          
-          # نسخ الصورة الأصلية لمجلد drawable
-          cp $ICON_FILE android/app/src/main/res/drawable/ic_launcher_foreground.png
-          
           # إنشاء خلفية الأيقونة
           cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
@@ -193,7 +253,7 @@ jobs:
           </shape>
           EOF
           
-          # إنشاء ملف الأيقونة التكيفية
+          # إنشاء ملف الأيقونة التكيفية الرئيسية
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -202,7 +262,7 @@ jobs:
           </adaptive-icon>
           EOF
           
-          # إنشاء ic_launcher_round بنفس الطريقة
+          # إنشاء الأيقونة الدائرية التكيفية
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -211,7 +271,7 @@ jobs:
           </adaptive-icon>
           EOF
           
-          echo "✅ تم إنشاء الأيقونة التكيفية"
+          echo "✅ تم إنشاء الأيقونة التكيفية لأندرويد 8+"
 
       - name: 🎨 تخصيص تطبيق Android
         run: |
@@ -246,14 +306,13 @@ jobs:
 
       - name: 🔧 إعداد أذونات Android
         run: |
-          # تحديث AndroidManifest.xml
           MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
           
           if [ -f "$MANIFEST_FILE" ]; then
-            # إضافة أذونات الإنترنت والوصول للشبكة
+            # إضافة الأذونات المطلوبة
             sed -i 's|</manifest>|    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>\n</manifest>|' $MANIFEST_FILE
             
-            # السماح بالنصوص الواضحة (HTTP)
+            # السماح بـ HTTP
             sed -i 's|android:usesCleartextTraffic="false"|android:usesCleartextTraffic="true"|' $MANIFEST_FILE
             
             echo "✅ تم تحديث الأذونات"
@@ -276,6 +335,11 @@ jobs:
             echo "📱 حجم الملف: $(du -h $APK_PATH | cut -f1)"
             echo "📋 اسم التطبيق: ${{ github.event.inputs.app_name }}"
             echo "🆔 App ID: ${{ github.event.inputs.app_id }}"
+            echo ""
+            echo "📊 إحصائيات الأيقونات المضمنة:"
+            find android/app/src/main/res -name "ic_launcher*" -type f | while read icon; do
+              echo "  🎨 ${icon#android/app/src/main/res/} ($(du -h "$icon" | cut -f1))"
+            done
           else
             echo "❌ فشل بناء APK"
             exit 1
@@ -292,3 +356,10 @@ jobs:
         run: |
           echo "🎊 تم بناء تطبيق ${{ github.event.inputs.app_name }} بنجاح!"
           echo "📱 يمكنك تحميل الـ APK من قسم Artifacts"
+          echo ""
+          echo "📋 ملخص الأيقونات التي تم إنشاؤها:"
+          echo "  📱 أيقونات التطبيق: 6 مقاسات (ldpi → xxxhdpi)"
+          echo "  🔔 أيقونات الإشعارات: 6 مقاسات (ldpi → xxxhdpi)"
+          echo "  🎯 أيقونة تكيفية: لأندرويد 8+"
+          echo "  ⭕ أيقونة دائرية: للشاشات المستديرة"
+          echo "  ⬜ أيقونة مربعة: للإشعارات"
