@@ -1,36 +1,36 @@
-// 🃏 Service Worker - جوكر
-// يعمل على تخزين الموقع كاملاً للعمل بدون إنترنت
-
+// 🃏 جوكر - Service Worker محسن للتطبيق
 const CACHE_NAME = 'joker-cache-v1.0.0';
+
+// قائمة الملفات للتخزين
 const urlsToCache = [
   '/',
   '/index.html',
-  // أضف كل ملفات موقعك هنا
-  // '/css/style.css',
-  // '/js/main.js',
-  // '/images/logo.png',
+  '/js/sw-register.js'
 ];
 
-// ============ التثبيت ============
+// تثبيت Service Worker
 self.addEventListener('install', function(event) {
-  console.log('🃏 [جوكر] Service Worker: جاري التثبيت...');
+  console.log('🃏 [جوكر] جاري تثبيت Service Worker...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
-        console.log('✅ [جوكر] تم فتح الكاش');
+        console.log('📦 [جوكر] جاري تخزين الملفات الأساسية...');
         return cache.addAll(urlsToCache);
       })
       .then(function() {
         console.log('✅ [جوكر] تم تخزين جميع الملفات');
         return self.skipWaiting();
       })
+      .catch(function(error) {
+        console.log('❌ [جوكر] خطأ في التخزين:', error);
+      })
   );
 });
 
-// ============ التفعيل ============
+// تفعيل Service Worker
 self.addEventListener('activate', function(event) {
-  console.log('🃏 [جوكر] Service Worker: جاري التفعيل...');
+  console.log('🔄 [جوكر] جاري تفعيل Service Worker...');
   
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
@@ -44,64 +44,66 @@ self.addEventListener('activate', function(event) {
       );
     })
     .then(function() {
-      console.log('✅ [جوكر] Service Worker مفعل وجاهز!');
+      console.log('✅ [جوكر] Service Worker مفعل!');
       return self.clients.claim();
     })
   );
 });
 
-// ============ الطلبات ============
+// استراتيجية: Network First ثم Cache
 self.addEventListener('fetch', function(event) {
-  // تجاهل الطلبات التي ليست GET
   if (event.request.method !== 'GET') return;
   
-  // تجاهل طلبات Chrome DevTools
-  if (event.request.url.includes('chrome-extension')) return;
-  
   event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        // إذا وجد الملف في الكاش - أرسله
-        if (response) {
-          return response;
+    fetch(event.request)
+      .then(function(networkResponse) {
+        // تخزين النسخة في الكاش
+        if (networkResponse && networkResponse.status === 200) {
+          var responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then(function(cache) {
+            console.log('💾 [جوكر] تخزين:', event.request.url);
+            cache.put(event.request, responseClone);
+          });
         }
-        
-        // إذا لم يوجد - حمله من الشبكة وخزنه
-        return fetch(event.request)
-          .then(function(networkResponse) {
-            // لا تخزن الردود غير الصالحة
-            if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-              return networkResponse;
+        return networkResponse;
+      })
+      .catch(function() {
+        // إذا فشل الاتصال - استخدم الكاش
+        return caches.match(event.request)
+          .then(function(cachedResponse) {
+            if (cachedResponse) {
+              console.log('📦 [جوكر] من الكاش:', event.request.url);
+              return cachedResponse;
             }
             
-            // نسخ الرد وتخزينه
-            var responseToCache = networkResponse.clone();
-            
-            caches.open(CACHE_NAME)
-              .then(function(cache) {
-                cache.put(event.request, responseToCache);
-              });
-            
-            return networkResponse;
-          })
-          .catch(function(error) {
-            console.log('⚠️ [جوكر] فشل التحميل:', error);
-            
-            // إذا فشل التحميل - عرض صفحة خطأ جميلة
+            // إذا كان الملف غير موجود - عرض الصفحة الرئيسية
             if (event.request.mode === 'navigate') {
               return caches.match('/index.html');
             }
-            
-            throw error;
           });
       })
   );
 });
 
-// ============ رسائل ============
+// استقبال الرسائل
 self.addEventListener('message', function(event) {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+  if (event.data && event.data.type === 'CACHE_ALL') {
+    console.log('📦 [جوكر] جاري تخزين جميع الملفات...');
+    
+    caches.open(CACHE_NAME).then(function(cache) {
+      event.data.files.forEach(function(file) {
+        fetch(file)
+          .then(function(response) {
+            if (response.ok) {
+              cache.put(file, response);
+              console.log('💾 [جوكر] تم تخزين:', file);
+            }
+          })
+          .catch(function(error) {
+            console.log('⚠️ [جوكر] فشل تخزين:', file, error);
+          });
+      });
+    });
   }
   
   if (event.data && event.data.type === 'CLEAR_CACHE') {
@@ -109,12 +111,6 @@ self.addEventListener('message', function(event) {
       console.log('🗑️ [جوكر] تم مسح الكاش');
     });
   }
-  
-  if (event.data && event.data.type === 'CHECK_UPDATE') {
-    self.registration.update().then(function() {
-      console.log('🔄 [جوكر] جاري التحقق من التحديثات...');
-    });
-  }
 });
 
-console.log('🃏 [جوكر] Service Worker جاهز ومستعد! 🎭');
+console.log('🃏 [جوكر] Service Worker جاهز! 🎭');
