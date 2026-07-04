@@ -1,4 +1,4 @@
-name: 🃏 Build APK - Joker
+name: 🃏 Build APK - أيقونة احترافية
 
 on:
   workflow_dispatch:
@@ -6,40 +6,52 @@ on:
       app_name:
         description: '📱 اسم التطبيق'
         required: true
-        default: 'جوكر'
+        default: 'تطبيقي'
         type: string
       app_id:
-        description: '🆔 App ID (مثال: com.joker.app)'
+        description: '🆔 App ID'
         required: true
-        default: 'com.joker.app'
-        type: string
-      app_color:
-        description: '🎨 لون خلفية الأيقونة (مثال: #FF0000)'
-        required: true
-        default: '#FF0000'
+        default: 'com.myapp.app'
         type: string
       app_letter:
-        description: '🔤 حرف في منتصف الأيقونة'
+        description: '🔤 الحرف'
         required: true
-        default: 'ج'
+        default: 'ت'
         type: string
-      icon_file:
-        description: '🖼️ اسم ملف الأيقونة PNG (ضع الملف في مجلد المشروع)'
-        required: false
-        default: 'icon.png'
-        type: string
-      site_folder:
-        description: '📁 مجلد موقع الويب (اتركه فارغاً للمجلد الرئيسي)'
-        required: false
-        default: ''
-        type: string
+      bg_color:
+        description: '🎨 لون الخلفية'
+        required: true
+        default: '#1A1A2E'
+        type: choice
+        options:
+          - '#1A1A2E'  # أسود مزرق
+          - '#16213E'  # كحلي غامق
+          - '#0F3460'  # أزرق غامق
+          - '#000000'  # أسود
+          - '#FFFFFF'  # أبيض
+          - '#E94560'  # أحمر
+          - '#533483'  # بنفسجي
+          - '#E90064'  # وردي غامق
+          - '#2B2B2B'  # رمادي غامق
+          - '#FF6B6B'  # مرجاني
+      icon_style:
+        description: '✨ نمط الأيقونة'
+        required: true
+        default: 'modern'
+        type: choice
+        options:
+          - 'modern'    # عصري مع تدرج
+          - 'minimal'   # بسيط وأنيق
+          - 'gradient'  # تدرج لوني
+          - 'neon'      # تأثير نيون
+          - 'glass'     # تأثير زجاجي
 
 permissions:
   contents: write
 
 jobs:
   build-apk:
-    name: 📱 بناء تطبيق ${{ github.event.inputs.app_name }}
+    name: 📱 بناء ${{ github.event.inputs.app_name }}
     runs-on: ubuntu-latest
     
     steps:
@@ -57,170 +69,151 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 📦 تثبيت Capacitor والأدوات
+      - name: 📦 تثبيت الأدوات
         run: |
           npm install -g @capacitor/cli @capacitor/core @capacitor/android
-          sudo apt-get update
+          sudo apt-get update -qq
           sudo apt-get install -y imagemagick
 
-      - name: 📁 تجهيز ملفات الموقع
+      - name: 📁 تجهيز www
         run: |
-          # إنشاء مجلد www
           mkdir -p www
-          
-          # تحديد مجلد المصدر
-          SOURCE_DIR="${{ github.event.inputs.site_folder }}"
-          if [ -z "$SOURCE_DIR" ]; then
-            SOURCE_DIR="."
-          fi
-          
-          # نسخ جميع ملفات الموقع
-          echo "📁 جاري نسخ الملفات من: $SOURCE_DIR"
-          cp -r $SOURCE_DIR/* www/ 2>/dev/null || true
-          
-          # نسخ الملفات المخفية إذا وجدت
-          cp -r $SOURCE_DIR/.* www/ 2>/dev/null || true
-          
-          # حذف الملفات غير المرغوب فيها
-          rm -rf www/.git www/.github www/node_modules www/.gitignore 2>/dev/null || true
-          rm -rf www/package.json www/package-lock.json 2>/dev/null || true
-          rm -rf www/android www/ios 2>/dev/null || true
-          
-          echo "✅ تم نسخ جميع ملفات الموقع"
-          echo "📋 محتويات مجلد www:"
-          ls -la www/
+          cp *.html www/ 2>/dev/null || true
+          cp *.js www/ 2>/dev/null || true
+          cp *.css www/ 2>/dev/null || true
 
-      - name: 📄 إنشاء package.json
+      - name: ⚙️ إعداد Capacitor
         run: |
           cat > package.json << EOF
           {
             "name": "${{ github.event.inputs.app_name }}",
             "version": "1.0.0",
-            "description": "تطبيق ${{ github.event.inputs.app_name }}",
-            "main": "www/index.html",
-            "scripts": {
-              "build": "echo 'Build complete'"
-            },
             "dependencies": {
               "@capacitor/android": "^6.0.0",
               "@capacitor/core": "^6.0.0",
-              "@capacitor/cli": "^6.0.0",
-              "@capacitor/filesystem": "^6.0.0",
-              "@capacitor/app": "^6.0.0",
-              "@capacitor/status-bar": "^6.0.0",
-              "@capacitor/splash-screen": "^6.0.0"
+              "@capacitor/cli": "^6.0.0"
             }
           }
           EOF
-
-      - name: ⚙️ إعداد Capacitor
-        run: |
+          
           cat > capacitor.config.json << EOF
           {
             "appId": "${{ github.event.inputs.app_id }}",
             "appName": "${{ github.event.inputs.app_name }}",
             "webDir": "www",
-            "bundledWebRuntime": false,
-            "server": {
-              "androidScheme": "https",
-              "allowNavigation": ["*"],
-              "cleartext": true
-            },
-            "android": {
-              "allowMixedContent": true,
-              "captureInput": true,
-              "webContentsDebuggingEnabled": true
-            },
-            "plugins": {
-              "SplashScreen": {
-                "launchShowDuration": 2000,
-                "backgroundColor": "${{ github.event.inputs.app_color }}"
-              }
-            }
+            "server": { "androidScheme": "https" },
+            "android": { "allowMixedContent": true }
           }
           EOF
-
-      - name: 📦 تثبيت المكتبات
-        run: npm install
-
-      - name: 🤖 إنشاء مشروع Android
-        run: npx cap add android
-
-      - name: 🎨 معالجة الأيقونة
-        run: |
-          ICON_FILE="${{ github.event.inputs.icon_file }}"
           
-          # إنشاء مجلدات الأيقونات
+          npm install
+          npx cap add android
+
+      - name: 🎨 إنشاء أيقونة احترافية
+        run: |
+          # إعداد المتغيرات
+          LETTER="${{ github.event.inputs.app_letter }}"
+          BG="${{ github.event.inputs.bg_color }}"
+          STYLE="${{ github.event.inputs.icon_style }}"
+          
+          # إنشاء المجلدات
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          mkdir -p android/app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}
+          mkdir -p android/app/src/main/res/values
           
-          # إنشاء الأيقونة التكيفية (Android 8+)
-          cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="${{ github.event.inputs.app_color }}"/>
-          </shape>
-          EOF
-          
-          # إذا وجدت صورة PNG، استخدمها كأيقونة
-          if [ -f "$ICON_FILE" ]; then
-            echo "🎨 تم العثور على صورة الأيقونة: $ICON_FILE"
-            
-            # نسخ الصورة الأصلية
-            cp $ICON_FILE android/app/src/main/res/drawable/icon_original.png
-            
-            # إنشاء نسخة foreground مع الصورة
-            cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <item
-                  android:width="108dp"
-                  android:height="108dp"
-                  android:gravity="center">
-                  <bitmap
-                      android:src="@drawable/icon_original"
-                      android:gravity="center"/>
-              </item>
-          </layer-list>
-          EOF
-            
-            # تحويل الصورة لأحجام مختلفة
-            convert $ICON_FILE -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert $ICON_FILE -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert $ICON_FILE -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert $ICON_FILE -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert $ICON_FILE -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            
+          # تحديد لون النص (أبيض للخلفيات الغامقة، أسود للفاتحة)
+          if [[ "$BG" == "#FFFFFF" ]]; then
+            TEXT_COLOR="#1A1A2E"
           else
-            echo "🔤 استخدام حرف '${{ github.event.inputs.app_letter }}' كأيقونة"
-            
-            # إنشاء أيقونة بحرف
-            cat > android/app/src/main/res/drawable/ic_launcher_foreground.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="108dp"
-              android:height="108dp"
-              android:viewportWidth="108"
-              android:viewportHeight="108">
-              <text
-                  android:text="${{ github.event.inputs.app_letter }}"
-                  android:textSize="65dp"
-                  android:textColor="#FFFFFF"
-                  android:fontFamily="sans-serif-black"
-                  android:gravity="center"
-                  android:textAlignment="center"
-                  android:x="54dp"
-                  android:y="72dp"/>
-          </vector>
-          EOF
+            TEXT_COLOR="#FFFFFF"
           fi
           
-          # إنشاء ملف الأيقونة التكيفية
+          # إنشاء أيقونة 432x432 حسب النمط المختار
+          case $STYLE in
+            'modern')
+              # خلفية متدرجة مع إطار
+              convert -size 432x432 \
+                \( xc:"$BG" \) \
+                \( -size 432x432 radial-gradient:"$BG"-"#00000000" \) \
+                -compose over -composite \
+                -fill "$TEXT_COLOR" -font Helvetica-Bold -pointsize 200 \
+                -gravity center -annotate 0 "$LETTER" \
+                -stroke "$TEXT_COLOR" -strokewidth 8 \
+                -fill none -draw "roundrectangle 30,30 402,402 80,80" \
+                android/app/src/main/res/drawable/ic_launcher_foreground.png
+              ;;
+              
+            'minimal')
+              # بسيط مع ظل
+              convert -size 432x432 xc:"$BG" \
+                -fill "$TEXT_COLOR" -font Helvetica-Bold -pointsize 220 \
+                -gravity center -annotate 0 "$LETTER" \
+                \( +clone -background black -shadow 60x10+5+5 \) \
+                +swap -background none -layers merge +repage \
+                android/app/src/main/res/drawable/ic_launcher_foreground.png
+              ;;
+              
+            'gradient')
+              # تدرج لوني مع حرف بارز
+              convert -size 432x432 \
+                gradient:"$BG"-"#00000000" \
+                \( +clone -rotate 45 \) \
+                -compose over -composite \
+                -fill white -font Helvetica-Bold -pointsize 200 \
+                -gravity center -annotate 0 "$LETTER" \
+                -alpha on -channel RGBA \
+                android/app/src/main/res/drawable/ic_launcher_foreground.png
+              ;;
+              
+            'neon')
+              # تأثير نيون
+              convert -size 432x432 xc:"#0A0A0A" \
+                -fill "$TEXT_COLOR" -font Helvetica-Bold -pointsize 200 \
+                -gravity center -annotate 0 "$LETTER" \
+                \( +clone -blur 0x20 -fill "$BG" -colorize 100% \) \
+                \( +clone -blur 0x10 -fill white -colorize 100% \) \
+                -compose over -composite \
+                android/app/src/main/res/drawable/ic_launcher_foreground.png
+              ;;
+              
+            'glass')
+              # تأثير زجاجي
+              convert -size 432x432 xc:"$BG" \
+                -fill "rgba(255,255,255,0.15)" \
+                -draw "roundrectangle 40,40 392,392 60,60" \
+                -fill white -font Helvetica-Bold -pointsize 200 \
+                -gravity center -annotate 0 "$LETTER" \
+                -alpha on -channel RGBA \
+                android/app/src/main/res/drawable/ic_launcher_foreground.png
+              ;;
+          esac
+          
+          # إنشاء أحجام مختلفة
+          for size in 48 72 96 144 192; do
+            case $size in
+              48) folder=mdpi;;
+              72) folder=hdpi;;
+              96) folder=xhdpi;;
+              144) folder=xxhdpi;;
+              192) folder=xxxhdpi;;
+            esac
+            convert android/app/src/main/res/drawable/ic_launcher_foreground.png \
+              -resize ${size}x${size} \
+              android/app/src/main/res/mipmap-${folder}/ic_launcher.png
+          done
+          
+          # خلفية بيضاء للأيقونة التكيفية
+          cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp" android:height="108dp"
+              android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#FFFFFF" android:pathData="M0,0h108v108h-108z"/>
+          </vector>
+          EOF
+          
+          # الأيقونة التكيفية
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -229,83 +222,29 @@ jobs:
           </adaptive-icon>
           EOF
           
-          echo "✅ تم إنشاء أيقونة ${{ github.event.inputs.app_name }}"
+          echo "✅ تم إنشاء أيقونة احترافية بنمط $STYLE"
 
-      - name: 🎨 تخصيص تطبيق Android
+      - name: 📝 إعدادات التطبيق
         run: |
-          # تخصيص اسم التطبيق
           mkdir -p android/app/src/main/res/values
           cat > android/app/src/main/res/values/strings.xml << EOF
-          <?xml version='1.0' encoding='utf-8'?>
-          <resources>
-              <string name="app_name">${{ github.event.inputs.app_name }}</string>
-              <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
-              <string name="package_name">${{ github.event.inputs.app_id }}</string>
-          </resources>
-          EOF
-          
-          # إنشاء ملف themes
-          mkdir -p android/app/src/main/res/values
-          cat > android/app/src/main/res/values/styles.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                  <item name="colorPrimary">${{ github.event.inputs.app_color }}</item>
-                  <item name="colorPrimaryDark">${{ github.event.inputs.app_color }}</item>
-                  <item name="colorAccent">${{ github.event.inputs.app_color }}</item>
-              </style>
-              
-              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
-                  <item name="android:background">${{ github.event.inputs.app_color }}</item>
-              </style>
+              <string name="app_name">${{ github.event.inputs.app_name }}</string>
           </resources>
           EOF
 
-      - name: 🔧 إعداد أذونات Android
-        run: |
-          # تحديث AndroidManifest.xml
-          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-          
-          if [ -f "$MANIFEST_FILE" ]; then
-            # إضافة أذونات الإنترنت والوصول للشبكة
-            sed -i 's|</manifest>|    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>\n</manifest>|' $MANIFEST_FILE
-            
-            # السماح بالنصوص الواضحة (HTTP)
-            sed -i 's|android:usesCleartextTraffic="false"|android:usesCleartextTraffic="true"|' $MANIFEST_FILE
-            
-            echo "✅ تم تحديث الأذونات"
-          fi
-
-      - name: 🔄 مزامنة المشروع
+      - name: 🔄 مزامنة
         run: npx cap sync android
 
-      - name: 🔨 بناء تطبيق APK
+      - name: 🔨 بناء APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: 📊 معلومات الملف الناتج
-        run: |
-          APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
-          if [ -f "$APK_PATH" ]; then
-            echo "✅ تم بناء APK بنجاح"
-            echo "📱 حجم الملف: $(du -h $APK_PATH | cut -f1)"
-            echo "📋 اسم التطبيق: ${{ github.event.inputs.app_name }}"
-            echo "🆔 App ID: ${{ github.event.inputs.app_id }}"
-          else
-            echo "❌ فشل بناء APK"
-            exit 1
-          fi
-
-      - name: 📤 رفع ملف APK
+      - name: 📤 رفع APK
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.inputs.app_name }}-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 90
-
-      - name: 🎉 اكتمال البناء
-        run: |
-          echo "🎊 تم بناء تطبيق ${{ github.event.inputs.app_name }} بنجاح!"
-          echo "📱 يمكنك تحميل الـ APK من قسم Artifacts"
