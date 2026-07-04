@@ -14,19 +14,14 @@ on:
         default: 'com.example.myapp'
         type: string
       icon_path:
-        description: '🖼️ مسار الأيقونة مع الاسم (مثال: icons/myicon.png)'
+        description: '🖼️ مسار الأيقونة مع الاسم (مثال: icon-512.png)'
         required: true
-        default: 'icons/icon.png'
+        default: 'icon-512.png'
         type: string
-      app_color:
-        description: '🎨 لون الأيقونة الاحتياطي (عند عدم وجود الصورة)'
+      icon_bg_color:
+        description: '🎨 لون خلفية الأيقونة (مثلاً: #FFFFFF للأبيض)'
         required: false
-        default: '#2196F3'
-        type: string
-      app_letter:
-        description: '🔤 حرف الأيقونة الاحتياطي (عند عدم وجود الصورة)'
-        required: false
-        default: 'A'
+        default: '#FFFFFF'
         type: string
 
 permissions:
@@ -52,8 +47,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 📦 Install Capacitor
-        run: npm install -g @capacitor/cli @capacitor/core @capacitor/android
+      - name: 📦 Install Capacitor & ImageMagick
+        run: |
+          npm install -g @capacitor/cli @capacitor/core @capacitor/android
+          sudo apt-get update -qq && sudo apt-get install -y imagemagick
 
       - name: 📁 Create www folder
         run: |
@@ -98,37 +95,67 @@ jobs:
       - name: 🤖 Add Android Platform
         run: npx cap add android
 
-      - name: 🎨 Set App Icon
+      - name: 🎨 Generate App Icon
         id: icon
         run: |
+          # إنشاء المجلدات
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
           mkdir -p android/app/src/main/res/values
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
 
           APP_NAME="${{ github.event.inputs.app_name }}"
-          APP_COLOR="${{ github.event.inputs.app_color }}"
-          APP_LETTER="${{ github.event.inputs.app_letter }}"
           ICON_PATH="${{ github.event.inputs.icon_path }}"
+          BG_COLOR="${{ github.event.inputs.icon_bg_color }}"
 
           if [ -f "$ICON_PATH" ]; then
-            cp "$ICON_PATH" android/app/src/main/res/drawable/ic_launcher_foreground.png
-            echo "✅ تم استخدام الأيقونة من: $ICON_PATH"
-          else
-            echo "⚠️ الأيقونة $ICON_PATH غير موجودة، جاري توليد أيقونة افتراضية..."
-            sudo apt-get update -qq && sudo apt-get install -y imagemagick
-            convert -size 1024x1024 xc:"$APP_COLOR" -gravity center -fill white \
-              -font Helvetica -pointsize 500 -annotate 0 "$APP_LETTER" \
+            echo "✅ تم العثور على الصورة: $ICON_PATH"
+            
+            # 🔥 تحويل الصورة وإزالة الشفافية نهائياً
+            convert "$ICON_PATH" \
+              -background "$BG_COLOR" \
+              -flatten \
+              -resize 432x432 \
+              -gravity center \
+              -extent 432x432 \
               android/app/src/main/res/drawable/ic_launcher_foreground.png
-            echo "✅ تم توليد أيقونة بالحرف $APP_LETTER ولون $APP_COLOR"
+            
+            # إنشاء أيقونات الميب ماب بجميع الأحجام
+            convert "$ICON_PATH" -background "$BG_COLOR" -flatten -resize 48x48 -gravity center -extent 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert "$ICON_PATH" -background "$BG_COLOR" -flatten -resize 72x72 -gravity center -extent 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert "$ICON_PATH" -background "$BG_COLOR" -flatten -resize 96x96 -gravity center -extent 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert "$ICON_PATH" -background "$BG_COLOR" -flatten -resize 144x144 -gravity center -extent 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert "$ICON_PATH" -background "$BG_COLOR" -flatten -resize 192x192 -gravity center -extent 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            
+            echo "✅ تم إنشاء الأيقونات بجميع الأحجام مع خلفية $BG_COLOR"
+          else
+            echo "❌ الخطأ: الصورة $ICON_PATH غير موجودة!"
+            echo "⚠️ جاري إنشاء أيقونة افتراضية..."
+            
+            # إنشاء أيقونة افتراضية
+            convert -size 432x432 xc:'#2196F3' -gravity center -fill white -font Helvetica -pointsize 200 -annotate 0 'A' android/app/src/main/res/drawable/ic_launcher_foreground.png
+            convert -size 48x48 xc:'#2196F3' -gravity center -fill white -font Helvetica -pointsize 24 -annotate 0 'A' android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert -size 72x72 xc:'#2196F3' -gravity center -fill white -font Helvetica -pointsize 36 -annotate 0 'A' android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert -size 96x96 xc:'#2196F3' -gravity center -fill white -font Helvetica -pointsize 48 -annotate 0 'A' android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert -size 144x144 xc:'#2196F3' -gravity center -fill white -font Helvetica -pointsize 72 -annotate 0 'A' android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert -size 192x192 xc:'#2196F3' -gravity center -fill white -font Helvetica -pointsize 96 -annotate 0 'A' android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            
+            echo "✅ تم إنشاء أيقونة افتراضية"
           fi
 
+          # خلفية الأيقونة التكيفية
           cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="#FFFFFF"/>
+              <solid android:color="$BG_COLOR"/>
           </shape>
           EOF
 
+          # الأيقونة التكيفية
           cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -140,7 +167,7 @@ jobs:
           cat > android/app/src/main/res/values/ic_launcher_background.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <color name="ic_launcher_background">#FFFFFF</color>
+              <color name="ic_launcher_background">$BG_COLOR</color>
           </resources>
           EOF
 
