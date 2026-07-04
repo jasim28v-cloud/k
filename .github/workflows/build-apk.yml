@@ -1,4 +1,4 @@
-name: 🃏 Build APK - Joker (All Sites)
+name: 🃏 Build APK - Joker (Any Project)
 
 on:
   workflow_dispatch:
@@ -6,43 +6,28 @@ on:
       app_name:
         description: '📱 اسم التطبيق'
         required: true
-        default: 'FLARE'
-        type: choice
-        options:
-          - 'LEGACY'
-          - 'VIOLET'
-          - 'GREEN'
-          - 'FLARE'
+        default: 'MyApp'
+        type: string
       app_id:
-        description: '🆔 App ID'
+        description: '🆔 App ID (مثال: com.example.myapp)'
         required: true
-        default: 'com.flare.orange'
-        type: choice
-        options:
-          - 'com.legacy.gold'
-          - 'com.violet.purple'
-          - 'com.green.emerald'
-          - 'com.flare.orange'
+        default: 'com.example.myapp'
+        type: string
+      icon_path:
+        description: '🖼️ مسار الأيقونة مع الاسم (مثال: icons/myicon.png)'
+        required: true
+        default: 'icons/icon.png'
+        type: string
       app_color:
-        description: '🎨 لون الأيقونة'
-        required: true
-        default: '#ea580c'
-        type: choice
-        options:
-          - '#d4a843'
-          - '#7c3aed'
-          - '#059669'
-          - '#ea580c'
+        description: '🎨 لون الأيقونة الاحتياطي (عند عدم وجود الصورة)'
+        required: false
+        default: '#2196F3'
+        type: string
       app_letter:
-        description: '🔤 حرف الأيقونة'
-        required: true
-        default: 'F'
-        type: choice
-        options:
-          - 'L'
-          - 'V'
-          - 'G'
-          - 'F'
+        description: '🔤 حرف الأيقونة الاحتياطي (عند عدم وجود الصورة)'
+        required: false
+        default: 'A'
+        type: string
 
 permissions:
   contents: write
@@ -119,12 +104,11 @@ jobs:
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
           mkdir -p android/app/src/main/res/values
-          mkdir -p icons
 
           APP_NAME="${{ github.event.inputs.app_name }}"
           APP_COLOR="${{ github.event.inputs.app_color }}"
           APP_LETTER="${{ github.event.inputs.app_letter }}"
-          ICON_PATH="icons/${APP_NAME}.png"
+          ICON_PATH="${{ github.event.inputs.icon_path }}"
 
           if [ -f "$ICON_PATH" ]; then
             cp "$ICON_PATH" android/app/src/main/res/drawable/ic_launcher_foreground.png
